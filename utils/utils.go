@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/algorand/go-algorand-sdk/transaction"
+	"github.com/algorand/go-algorand-sdk/types"
 )
 
 type variable struct {
@@ -25,10 +26,14 @@ type variable struct {
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition map[string]interface{}, variables map[string]interface{}) []byte {
+func GetProgram(definition map[string]interface{}, variables map[string]interface{}) ([]byte, error) {
 
-	template, _ := definition["bytecode"].(string)
-	templateBytes, _ := b64.StdEncoding.DecodeString(template)
+	template, ok := definition["bytecode"].(string)
+
+	templateBytes, err := b64.StdEncoding.DecodeString(template)
+	if err != nil {
+		return nil, err
+	}
 
 	offset := 0
 	var dVariables []variable = definition["variables"].([]variable)
@@ -55,7 +60,7 @@ func GetProgram(definition map[string]interface{}, variables map[string]interfac
 
 	}
 
-	return templateBytes
+	return templateBytes, nil
 
 }
 
@@ -79,7 +84,6 @@ func EncodeVarint(number int) []byte {
 		towrite := number & 0x7f
 		number >>= 7
 
-		//TODO: if number == if number != 0 ?
 		if number != 0 {
 			buf = append(buf, byte(towrite|0x80))
 		} else {
@@ -94,17 +98,17 @@ func EncodeVarint(number int) []byte {
 
 //TODO: fix return type
 //TODO: fix params types
-func SignAndSubmitTransactions(client interface{}, transactions []interface{}, signedTransactions []interface{}, sender interface{}, senderSK interface{}) {
+func SignAndSubmitTransactions(client interface{}, transactions []types.Transaction, signedTransactions []types.Transaction, sender types.Address, senderSK interface{}) {
 
 	for i, txn := range transactions {
 
-		if txn.sender == sender {
+		if txn.Sender == sender {
 			signedTransactions[i] = txn.sign(senderSK)
 		}
 
 	}
 
-	txid := client.sendTransaction(signedTransactions)
+	txid := client.(signedTransactions)
 	return WaitForConfirmation(client, txid)
 
 }
@@ -176,16 +180,18 @@ func GetStateBytes(state interface{}, key interface{}) {
 }
 
 type transactionGroup struct {
-	transactions       []interface{}
-	signedTransactions []interface{}
+	transactions       []types.Transaction
+	signedTransactions []types.Transaction
 }
 
-//TODO: fix assign group id type for transactions
-func NewTransactionGroup(transactions []interface{}) transactionGroup {
+func NewTransactionGroup(transactions []types.Transaction) (transactionGroup, error) {
 
-	transactions, err := transaction.AssignGroupID(transactions)
-	signedTransactions := make([]interface{}, len(transactions))
-	return transactionGroup{transactions, signedTransactions}
+	transactions, err := transaction.AssignGroupID(transactions, "")
+	if err != nil {
+		return transactionGroup{}, err
+	}
+	signedTransactions := make([]types.Transaction, len(transactions))
+	return transactionGroup{transactions, signedTransactions}, nil
 
 }
 
