@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"context"
+	"crypto/ed25519"
 	b64 "encoding/base64"
 	"encoding/binary"
 	"errors"
@@ -8,6 +10,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/algorand/go-algorand-sdk/client/v2/algod"
+	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/transaction"
 	"github.com/algorand/go-algorand-sdk/types"
 )
@@ -96,19 +100,32 @@ func EncodeVarint(number int) []byte {
 
 }
 
-//TODO: fix return type
-//TODO: fix params types
-func SignAndSubmitTransactions(client interface{}, transactions []types.Transaction, signedTransactions []types.Transaction, sender types.Address, senderSK interface{}) {
+//TODO: what about signed transactions in params
+func SignAndSubmitTransactions(client algod.Client, transactions []types.Transaction, signedTransactions []types.Transaction, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
+
+	var signedGroup []byte
 
 	for i, txn := range transactions {
 
 		if txn.Sender == sender {
-			signedTransactions[i] = txn.sign(senderSK)
+			_, stx, err := crypto.SignTransaction(senderSK, txn)
+
+			if err != nil {
+				return nil, errors.New(fmt.Sprintf("Signing failed with %v", err))
+			}
+
+			signedGroup = append(signedGroup, stx...)
+			signedTransactions[i] = txn
 		}
 
 	}
 
-	txid := client.(signedTransactions)
+	txid, err := client.SendRawTransaction(signedGroup).Do(context.Background())
+
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("Failed to create transaction: %v\n", err))
+	}
+
 	return WaitForConfirmation(client, txid)
 
 }
@@ -117,27 +134,42 @@ func SignAndSubmitTransactions(client interface{}, transactions []types.Transact
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
+func WaitForConfirmation(client algod.Client, txid string) (*algod.PendingTransactionInformation, error) {
 
-//TODO: fix return type
-//TODO: fix params types
-func WaitForConfirmation(client interface{}, txid int) {
+	nodeStatus, err := client.Status().Do(context.Background())
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error getting algod status: %s\n", err))
+	}
 
-	lastRound := client.status().get("last-round")
-	txinfo := client.pendingTransactionInfo(txid)
+	lastRound := nodeStatus.LastRound
 
-	for !(txinfo.get("confirmed-round") && txinfo.get("confirmed-round") > 0) {
+	txinfo := client.PendingTransactionInformation(txid)
+
+	pendingTrxInfo, _, err := txinfo.Do(context.Background())
+
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error getting algod pending transaction info: %s\n", err))
+	}
+
+	for !(pendingTrxInfo.ConfirmedRound > 0) {
 
 		fmt.Println("Waiting for confirmation")
 		lastRound += 1
-		client.statusAfterBlock(lastRound)
-		txinfo = client.pendingTransactionInfo(txid)
+		client.StatusAfterBlock(lastRound)
+
+		pendingTrxInfo, _, err = txinfo.Do(context.Background())
+
+		if err != nil {
+			return nil, errors.New(fmt.Sprintf("error getting algod pending transaction info: %s\n", err))
+		}
 
 	}
 
-	txinfo.txid = txid
+	//TODO: what should return and how to set txid
+	// txinfo.txid = txid
 
-	fmt.Printf("Transaction %d confirmed in round %d.\n", txid, txinfo.get("confirmed-round"))
-	return txinfo
+	fmt.Printf("Transaction %d confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
+	return txinfo, nil
 
 }
 
