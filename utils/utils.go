@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/algorand/go-algorand-sdk/transaction"
 )
 
 type variable struct {
@@ -141,7 +143,6 @@ func IntToBytes(num uint) []byte {
 	return data
 }
 
-
 //TODO: return value type
 //TODO: fix bugs
 func GetStateInt(state interface{}, key interface{}) {
@@ -154,7 +155,7 @@ func GetStateInt(state interface{}, key interface{}) {
 	}
 
 	//TODO: what about decode?
-	return state.get(key, {"unit": 0}).unit
+	// return state.get(key, {"unit": 0}).unit
 
 }
 
@@ -170,6 +171,73 @@ func GetStateBytes(state interface{}, key interface{}) {
 	}
 
 	//TODO: what about decode?
-	return state.get(key, {"bytes": ""}).bytes
+	// return state.get(key, {"bytes": ""}).bytes
+
+}
+
+type transactionGroup struct {
+	transactions       []interface{}
+	signedTransactions []interface{}
+}
+
+//TODO: fix assign group id type for transactions
+func NewTransactionGroup(transactions []interface{}) transactionGroup {
+
+	transactions, err := transaction.AssignGroupID(transactions)
+	signedTransactions := make([]interface{}, len(transactions))
+	return transactionGroup{transactions, signedTransactions}
+
+}
+
+//TODO: fix user type
+func (s *transactionGroup) Sign(user interface{}) {
+	user.signTransactionGroup(s)
+}
+
+//TODO: fix logicsig type
+//TODO: where is the LogicSigTransaction method
+func (s *transactionGroup) SignWithLogicsig(logicsig interface{}) {
+
+	address := logicsig.address()
+	for i, txn := range s.transactions {
+		if txn.sender == address {
+			s.signedTransactions[i] = transaction.LogicSigTransaction(txn, logicsig)
+		}
+	}
+
+}
+
+func (s *transactionGroup) SignWithPrivateKey(address string, privateKey string) {
+
+	for i, txn := range s.transactions {
+		if txn.sender == address {
+			self.signedTransactions[i] = txn.sign(privateKey)
+		}
+	}
+
+}
+
+type Return struct {
+	txid interface{}
+}
+
+//TODO: fix return type
+//TODO: fix algod type errors
+//TODO: fix return type for waitforconfirmation
+func (s *transactionGroup) Sumbit(algod interface{}, wait bool) (*Return, error) {
+
+	txid, err := algod.sendTransactions(s.signedTransactions)
+	if err != nil {
+		//TODO: should i return err or new err with string?
+		return nil, err
+	}
+
+	if wait {
+		return WaitForConfirmation(algod, txid)
+	}
+
+	return &Return{
+		txid,
+	}, nil
 
 }
