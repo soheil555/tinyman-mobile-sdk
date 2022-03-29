@@ -16,23 +16,27 @@ import (
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
-type variable struct {
-	Name   string
-	Type   string
-	Index  int
-	Length int
+type Variable struct {
+	name   string
+	_type  string
+	index  int
+	length int
 }
 
-//TODO: error handling for ,_
-//TODO: definition type?
-//TODO: definition['variables'] type?
-//TODO: is return value type ok?
+type Definition struct {
+	bytecode  string
+	address   string
+	size      int
+	variables []Variable
+	source    string
+}
+
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition map[string]interface{}, variables map[string]interface{}) ([]byte, error) {
+func GetProgram(definition Definition, variables map[string]interface{}) ([]byte, error) {
 
-	template, _ := definition["bytecode"].(string)
+	template := definition.bytecode
 
 	templateBytes, err := b64.StdEncoding.DecodeString(template)
 	if err != nil {
@@ -40,27 +44,27 @@ func GetProgram(definition map[string]interface{}, variables map[string]interfac
 	}
 
 	offset := 0
-	var dVariables []variable = definition["variables"].([]variable)
+	var dVariables = definition.variables
 
 	sort.SliceStable(dVariables, func(i, j int) bool {
-		return dVariables[i].Index < dVariables[j].Index
+		return dVariables[i].index < dVariables[j].index
 	})
 
 	for _, v := range dVariables {
 
-		s := strings.Split(v.Name, "TMPL_")
+		s := strings.Split(v.name, "TMPL_")
 		name := strings.ToLower(s[len(s)-1])
 		value := variables[name]
-		start := v.Index - offset
-		end := start + v.Length
-		valueEncoded, err := EncodeValue(value, v.Type)
+		start := v.index - offset
+		end := start + v.length
+		valueEncoded, err := EncodeValue(value, v._type)
 
 		if err != nil {
 			return nil, err
 		}
 
 		valueEncodedLen := len(valueEncoded)
-		diff := v.Length - valueEncodedLen
+		diff := v.length - valueEncodedLen
 		offset += diff
 		//TODO: better way for assign?
 		for i := start; i < end; i++ {
