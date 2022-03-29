@@ -2,6 +2,8 @@ package assets
 
 import (
 	"context"
+	"fmt"
+	"math"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
@@ -14,7 +16,6 @@ type Asset struct {
 	Decimals uint64
 }
 
-//TODO: what about __call__, __hash__, __repr__ methods?
 func (s *Asset) Fetch(algod algod.Client) error {
 
 	var params models.AssetParams
@@ -46,8 +47,64 @@ func (s *Asset) Fetch(algod algod.Client) error {
 
 }
 
-//TODO: what about __mul__, __add__, __sub__, __gt__, __lt__, __eq__, __repr__ methods?
+//TODO: is call and hash methods ok?
+func (s *Asset) Call(amount uint64) AssetAmount {
+	return AssetAmount{*s, amount}
+}
+
+func (s *Asset) Hash() uint64 {
+	return s.Id
+}
+
+func (s *Asset) String() string {
+	return fmt.Sprintf("Asset(%s - %d)", s.UnitName, s.Id)
+}
+
 type AssetAmount struct {
 	Asset  Asset
-	Amount int
+	Amount uint64
+}
+
+func (s *AssetAmount) Mul(o uint64) AssetAmount {
+	return AssetAmount{s.Asset, s.Amount * o}
+}
+
+func (s *AssetAmount) Add(o AssetAmount) (AssetAmount, error) {
+	if s.Asset != o.Asset {
+		return AssetAmount{}, fmt.Errorf("unsupported asset type for +")
+	}
+
+	return AssetAmount{s.Asset, s.Amount + o.Amount}, nil
+}
+
+//TODO: can amount be negative?
+func (s *AssetAmount) Sub(o AssetAmount) (AssetAmount, error) {
+	if s.Asset != o.Asset {
+		return AssetAmount{}, fmt.Errorf("unsupported asset type for -")
+	}
+
+	return AssetAmount{s.Asset, s.Amount - o.Amount}, nil
+}
+
+//TODO: check for int and float
+func (s *AssetAmount) Gt(o AssetAmount) (bool, error) {
+	if s.Asset != o.Asset {
+		return false, fmt.Errorf("unsupported asset type for >")
+	}
+
+	return s.Amount > o.Amount, nil
+}
+
+//TODO: check for int and float
+func (s *AssetAmount) Lt(o AssetAmount) (bool, error) {
+	if s.Asset != o.Asset {
+		return false, fmt.Errorf("unsupported asset type for <")
+	}
+
+	return s.Amount < o.Amount, nil
+}
+
+func (s *AssetAmount) String() string {
+	amount := float64(s.Amount) / math.Pow(10.0, float64(s.Asset.Decimals))
+	return fmt.Sprintf("{%s}('%f')", s.Asset.UnitName, amount)
 }
