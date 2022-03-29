@@ -77,8 +77,6 @@ func GetProgram(definition Definition, variables map[string]interface{}) ([]byte
 
 }
 
-//TODO: what about type check?
-//TODO: what about type as var name?
 func EncodeValue(value interface{}, _type string) ([]byte, error) {
 
 	if _type == "int" {
@@ -109,10 +107,7 @@ func EncodeVarint(number int) []byte {
 
 }
 
-//TODO: what about signed transactions in params
-func SignAndSubmitTransactions(client algod.Client, transactions []types.Transaction, signedTransactions []types.Transaction, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
-
-	var signedGroup []byte
+func SignAndSubmitTransactions(client algod.Client, transactions []types.Transaction, signedTransactions [][]byte, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
 
 	for i, txn := range transactions {
 
@@ -123,9 +118,16 @@ func SignAndSubmitTransactions(client algod.Client, transactions []types.Transac
 				return nil, fmt.Errorf("Signing failed with %v", err)
 			}
 
-			signedGroup = append(signedGroup, stx...)
-			signedTransactions[i] = txn
+			signedTransactions[i] = stx
 		}
+
+	}
+
+	var signedGroup []byte
+
+	for _, stx := range signedTransactions {
+
+		signedGroup = append(signedGroup, stx...)
 
 	}
 
@@ -188,7 +190,6 @@ func IntToBytes(num uint) []byte {
 	return data
 }
 
-//TODO: return value type
 //TODO: fix bugs
 func GetStateInt(state interface{}, key interface{}) {
 
@@ -199,12 +200,8 @@ func GetStateInt(state interface{}, key interface{}) {
 
 	}
 
-	//TODO: what about decode?
-	// return state.get(key, {"unit": 0}).unit
-
 }
 
-//TODO: return value type
 //TODO: fix bugs
 func GetStateBytes(state interface{}, key interface{}) {
 
@@ -214,9 +211,6 @@ func GetStateBytes(state interface{}, key interface{}) {
 		key = b64.StdEncoding.EncodeToString([]byte(k))
 
 	}
-
-	//TODO: what about decode?
-	// return state.get(key, {"bytes": ""}).bytes
 
 }
 
