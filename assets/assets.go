@@ -1,42 +1,53 @@
 package assets
 
+import (
+	"context"
+
+	"github.com/algorand/go-algorand-sdk/client/v2/algod"
+	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
+)
+
 type Asset struct {
-	Id int
-	Name string
+	Id       uint64
+	Name     string
 	UnitName string
-	Decimals int
+	Decimals uint64
 }
 
-//TODO: add algod method parameter
-//TODO: what is params structure
-//TODO: should export fetch?
 //TODO: what about __call__, __hash__, __repr__ methods?
-func (s *Asset) Fetch(algod interface{}){
+func (s *Asset) Fetch(algod algod.Client) error {
 
-	var params map[string]interface{}
+	var params models.AssetParams
 
 	if s.Id > 0 {
-		//params = algod.asset_info(self.id)['params']
+		asset, err := algod.GetAssetByID(s.Id).Do(context.Background())
+
+		if err != nil {
+			return err
+		}
+
+		params = asset.Params
+
 	} else {
 
-		params = map[string]interface{} {
-			"name": "Algo",
-			"unit-name": "ALGO",
-			"decimals": 6,
+		params = models.AssetParams{
+			Name:     "Algo",
+			UnitName: "ALGO",
+			Decimals: 6,
 		}
 
 	}
 
-	s.Name = params["name"].(string)
-	s.UnitName = params["unit-name"].(string)
-	s.Decimals = params["decimals"].(int)
+	s.Name = params.Name
+	s.UnitName = params.UnitName
+	s.Decimals = params.Decimals
+
+	return nil
 
 }
-
 
 //TODO: what about __mul__, __add__, __sub__, __gt__, __lt__, __eq__, __repr__ methods?
 type AssetAmount struct {
-	Asset Asset
+	Asset  Asset
 	Amount int
 }
-

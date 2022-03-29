@@ -53,7 +53,12 @@ func GetProgram(definition map[string]interface{}, variables map[string]interfac
 		value := variables[name]
 		start := v.Index - offset
 		end := start + v.Length
-		valueEncoded, _ := EncodeValue(value, v.Type)
+		valueEncoded, err := EncodeValue(value, v.Type)
+
+		if err != nil {
+			return nil, err
+		}
+
 		valueEncodedLen := len(valueEncoded)
 		diff := v.Length - valueEncodedLen
 		offset += diff
@@ -211,6 +216,7 @@ func GetStateBytes(state interface{}, key interface{}) {
 
 }
 
+//TODO: should move to another file?
 type transactionGroup struct {
 	transactions       []types.Transaction
 	signedTransactions [][]byte
