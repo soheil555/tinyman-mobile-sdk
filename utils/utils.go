@@ -16,19 +16,18 @@ import (
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
-type Variable struct {
-	name   string
-	_type  string
-	index  int
-	length int
-}
-
+//TODO: use from asc type
 type Definition struct {
-	bytecode  string
-	address   string
-	size      int
-	variables []Variable
-	source    string
+	Bytecode  string `json:"bytecode"`
+	Address   string `json:"address"`
+	Size      int    `json:"size"`
+	Variables []struct {
+		Name   string `json:"name"`
+		Type   string `json:"type"`
+		Index  int    `json:"index"`
+		Length int    `json:"length"`
+	} `json:"variables"`
+	Source string `json:"source"`
 }
 
 /*
@@ -36,7 +35,7 @@ type Definition struct {
 */
 func GetProgram(definition Definition, variables map[string]interface{}) ([]byte, error) {
 
-	template := definition.bytecode
+	template := definition.Bytecode
 
 	templateBytes, err := b64.StdEncoding.DecodeString(template)
 	if err != nil {
@@ -44,27 +43,27 @@ func GetProgram(definition Definition, variables map[string]interface{}) ([]byte
 	}
 
 	offset := 0
-	var dVariables = definition.variables
+	var dVariables = definition.Variables
 
 	sort.SliceStable(dVariables, func(i, j int) bool {
-		return dVariables[i].index < dVariables[j].index
+		return dVariables[i].Index < dVariables[j].Index
 	})
 
 	for _, v := range dVariables {
 
-		s := strings.Split(v.name, "TMPL_")
+		s := strings.Split(v.Name, "TMPL_")
 		name := strings.ToLower(s[len(s)-1])
 		value := variables[name]
-		start := v.index - offset
-		end := start + v.length
-		valueEncoded, err := EncodeValue(value, v._type)
+		start := v.Index - offset
+		end := start + v.Length
+		valueEncoded, err := EncodeValue(value, v.Type)
 
 		if err != nil {
 			return nil, err
 		}
 
 		valueEncodedLen := len(valueEncoded)
-		diff := v.length - valueEncodedLen
+		diff := v.Length - valueEncodedLen
 		offset += diff
 		//TODO: better way for assign?
 		for i := start; i < end; i++ {
