@@ -49,7 +49,7 @@ func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID 
 		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
 	}
 
-	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("redeem")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, sender, nil, types.Digest{}, [32]byte{}, types.Address{})
+	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("redeem")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
