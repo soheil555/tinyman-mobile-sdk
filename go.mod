@@ -3,6 +3,7 @@ module tinyman-mobile-sdk
 go 1.18
 
 require (
+	github.com/algorand/go-algorand v0.0.0-20220323144801-17c0feef002f // indirect
 	github.com/algorand/go-algorand-sdk v1.14.0 // indirect
 	github.com/algorand/go-codec/codec v1.1.8 // indirect
 	github.com/google/go-querystring v1.0.0 // indirect
