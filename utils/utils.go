@@ -81,7 +81,7 @@ func EncodeValue(value interface{}, _type string) ([]byte, error) {
 	if _type == "int" {
 		return EncodeVarint(value.(int)), nil
 	} else {
-		return nil, fmt.Errorf("Unsupported value type %s!", _type)
+		return nil, fmt.Errorf("unsupported value type %s", _type)
 	}
 
 }
@@ -114,7 +114,7 @@ func SignAndSubmitTransactions(client algod.Client, transactions []types.Transac
 			_, stx, err := crypto.SignTransaction(senderSK, txn)
 
 			if err != nil {
-				return nil, fmt.Errorf("Signing failed with %v", err)
+				return nil, fmt.Errorf("signing failed with %v", err)
 			}
 
 			signedTransactions[i] = stx
@@ -133,7 +133,7 @@ func SignAndSubmitTransactions(client algod.Client, transactions []types.Transac
 	txid, err := client.SendRawTransaction(signedGroup).Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create transaction: %v\n", err)
+		return nil, fmt.Errorf("failed to create transaction: %v", err)
 	}
 
 	return WaitForConfirmation(client, txid)
@@ -148,7 +148,7 @@ func WaitForConfirmation(client algod.Client, txid string) (*algod.PendingTransa
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("error getting algod status: %s\n", err)
+		return nil, fmt.Errorf("error getting algod status: %s", err)
 	}
 
 	lastRound := nodeStatus.LastRound
@@ -158,7 +158,7 @@ func WaitForConfirmation(client algod.Client, txid string) (*algod.PendingTransa
 	pendingTrxInfo, _, err := txinfo.Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting algod pending transaction info: %s\n", err)
+		return nil, fmt.Errorf("error getting algod pending transaction info: %s", err)
 	}
 
 	for !(pendingTrxInfo.ConfirmedRound > 0) {
@@ -170,7 +170,7 @@ func WaitForConfirmation(client algod.Client, txid string) (*algod.PendingTransa
 		pendingTrxInfo, _, err = txinfo.Do(context.Background())
 
 		if err != nil {
-			return nil, fmt.Errorf("error getting algod pending transaction info: %s\n", err)
+			return nil, fmt.Errorf("error getting algod pending transaction info: %s", err)
 		}
 
 	}
@@ -214,20 +214,20 @@ func GetStateBytes(state interface{}, key interface{}) {
 }
 
 //TODO: should move to another file?
-type transactionGroup struct {
+type TransactionGroup struct {
 	transactions       []types.Transaction
 	signedTransactions [][]byte
 }
 
-func NewTransactionGroup(transactions []types.Transaction) (transactionGroup, error) {
+func NewTransactionGroup(transactions []types.Transaction) (TransactionGroup, error) {
 
 	transactions, err := transaction.AssignGroupID(transactions, "")
 	if err != nil {
-		return transactionGroup{}, err
+		return TransactionGroup{}, err
 	}
 	//TODO: [][]byte. is it good?
 	signedTransactions := make([][]byte, len(transactions))
-	return transactionGroup{transactions, signedTransactions}, nil
+	return TransactionGroup{transactions, signedTransactions}, nil
 
 }
 
@@ -236,7 +236,7 @@ func NewTransactionGroup(transactions []types.Transaction) (transactionGroup, er
 // 	user.signTransactionGroup(s)
 // }
 
-func (s *transactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
+func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 
 	_, byteArrays, err := logic.ReadProgram(logicsig.Logic, nil)
 
@@ -258,7 +258,7 @@ func (s *transactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 			_, stxBytes, err := crypto.SignLogicsigTransaction(logicsig, txn)
 
 			if err != nil {
-				return fmt.Errorf("Failed to create transaction: %v\n", err)
+				return fmt.Errorf("failed to create transaction: %v", err)
 			}
 
 			s.signedTransactions[i] = stxBytes
@@ -269,13 +269,13 @@ func (s *transactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 
 }
 
-func (s *transactionGroup) SignWithPrivateKey(address types.Address, privateKey ed25519.PrivateKey) error {
+func (s *TransactionGroup) SignWithPrivateKey(address types.Address, privateKey ed25519.PrivateKey) error {
 
 	for i, txn := range s.transactions {
 		if txn.Sender == address {
 			_, stxBytes, err := crypto.SignTransaction(privateKey, txn)
 			if err != nil {
-				return fmt.Errorf("Failed to sign transaction: %v\n", err)
+				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
 			s.signedTransactions[i] = stxBytes
 		}
@@ -285,7 +285,7 @@ func (s *transactionGroup) SignWithPrivateKey(address types.Address, privateKey 
 
 }
 
-func (s *transactionGroup) Sumbit(algod algod.Client, wait bool) (*algod.PendingTransactionInformation, error) {
+func (s *TransactionGroup) Sumbit(algod algod.Client, wait bool) (*algod.PendingTransactionInformation, error) {
 
 	var signedGroup []byte
 
@@ -298,7 +298,7 @@ func (s *transactionGroup) Sumbit(algod algod.Client, wait bool) (*algod.Pending
 	txid, err := algod.SendRawTransaction(signedGroup).Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("Failed to send transaction: %v\n", err)
+		return nil, fmt.Errorf("failed to send transaction: %v", err)
 	}
 
 	if wait {
