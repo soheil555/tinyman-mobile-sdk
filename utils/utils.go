@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
+	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/logic"
 	"github.com/algorand/go-algorand-sdk/transaction"
@@ -183,33 +184,57 @@ func WaitForConfirmation(client *algod.Client, txid string) (*algod.PendingTrans
 
 }
 
-func IntToBytes(num uint) []byte {
+func IntToBytes(num uint64) []byte {
 	data := make([]byte, 8)
-	binary.BigEndian.PutUint64(data[:], uint64(num))
+	binary.BigEndian.PutUint64(data[:], num)
 	return data
 }
 
-//TODO: fix bugs
-func GetStateInt(state interface{}, key interface{}) {
+//TODO: is it correct
+func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
+
+	var keyString string
 
 	switch k := key.(type) {
 
+	case []byte:
+		keyString = b64.StdEncoding.EncodeToString([]byte(k))
 	case string:
-		key = b64.StdEncoding.EncodeToString([]byte(k))
+		keyString = k
+	default:
+		//TODO: maybe return error
+		keyString = ""
 
 	}
+
+	if val, ok := state[keyString]; ok {
+		return val.Uint
+	}
+	return 0
 
 }
 
-//TODO: fix bugs
-func GetStateBytes(state interface{}, key interface{}) {
+//TODO: is it correct
+func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
+
+	var keyString string
 
 	switch k := key.(type) {
 
 	case string:
-		key = b64.StdEncoding.EncodeToString([]byte(k))
+		keyString = b64.StdEncoding.EncodeToString([]byte(k))
+	case []byte:
+		keyString = string(k[:])
+	default:
+		//TODO: maybe return error
+		keyString = ""
 
 	}
+
+	if val, ok := state[keyString]; ok {
+		return val.Bytes
+	}
+	return ""
 
 }
 
