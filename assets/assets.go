@@ -65,7 +65,8 @@ type AssetAmount struct {
 	Amount uint64
 }
 
-func (s *AssetAmount) Mul(o uint64) AssetAmount {
+func (s *AssetAmount) Mul(o interface{}) AssetAmount {
+
 	return AssetAmount{s.Asset, s.Amount * o}
 }
 
