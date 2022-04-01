@@ -106,7 +106,7 @@ func EncodeVarint(number int) []byte {
 
 }
 
-func SignAndSubmitTransactions(client algod.Client, transactions []types.Transaction, signedTransactions [][]byte, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
+func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transaction, signedTransactions [][]byte, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
 
 	for i, txn := range transactions {
 
@@ -144,7 +144,7 @@ func SignAndSubmitTransactions(client algod.Client, transactions []types.Transac
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
-func WaitForConfirmation(client algod.Client, txid string) (*algod.PendingTransactionInformation, error) {
+func WaitForConfirmation(client *algod.Client, txid string) (*algod.PendingTransactionInformation, error) {
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
@@ -215,8 +215,8 @@ func GetStateBytes(state interface{}, key interface{}) {
 
 //TODO: should move to another file?
 type TransactionGroup struct {
-	transactions       []types.Transaction
-	signedTransactions [][]byte
+	Transactions       []types.Transaction
+	SignedTransactions [][]byte
 }
 
 func NewTransactionGroup(transactions []types.Transaction) (TransactionGroup, error) {
@@ -253,7 +253,7 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 		return fmt.Errorf("address generated from receiver bytes is the wrong size")
 	}
 
-	for i, txn := range s.transactions {
+	for i, txn := range s.Transactions {
 		if txn.Sender == address {
 			_, stxBytes, err := crypto.SignLogicsigTransaction(logicsig, txn)
 
@@ -261,7 +261,7 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 				return fmt.Errorf("failed to create transaction: %v", err)
 			}
 
-			s.signedTransactions[i] = stxBytes
+			s.SignedTransactions[i] = stxBytes
 		}
 	}
 
@@ -271,13 +271,13 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 
 func (s *TransactionGroup) SignWithPrivateKey(address types.Address, privateKey ed25519.PrivateKey) error {
 
-	for i, txn := range s.transactions {
+	for i, txn := range s.Transactions {
 		if txn.Sender == address {
 			_, stxBytes, err := crypto.SignTransaction(privateKey, txn)
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
-			s.signedTransactions[i] = stxBytes
+			s.SignedTransactions[i] = stxBytes
 		}
 	}
 
@@ -285,11 +285,11 @@ func (s *TransactionGroup) SignWithPrivateKey(address types.Address, privateKey 
 
 }
 
-func (s *TransactionGroup) Sumbit(algod algod.Client, wait bool) (*algod.PendingTransactionInformation, error) {
+func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (*algod.PendingTransactionInformation, error) {
 
 	var signedGroup []byte
 
-	for _, txn := range s.signedTransactions {
+	for _, txn := range s.SignedTransactions {
 
 		signedGroup = append(signedGroup, txn...)
 

@@ -16,7 +16,7 @@ type Asset struct {
 	Decimals uint64
 }
 
-func (s *Asset) Fetch(algod algod.Client) error {
+func (s *Asset) Fetch(algod *algod.Client) error {
 
 	var params models.AssetParams
 
