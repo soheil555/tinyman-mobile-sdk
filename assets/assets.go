@@ -9,6 +9,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 )
 
+//TODO: problem on using uint64 or float64
 type Asset struct {
 	Id       uint64
 	Name     string
@@ -48,7 +49,7 @@ func (s *Asset) Fetch(algod *algod.Client) error {
 }
 
 //TODO: is call and hash methods ok?
-func (s *Asset) Call(amount uint64) AssetAmount {
+func (s *Asset) Call(amount float64) AssetAmount {
 	return AssetAmount{*s, amount}
 }
 
@@ -62,10 +63,10 @@ func (s *Asset) String() string {
 
 type AssetAmount struct {
 	Asset  Asset
-	Amount uint64
+	Amount float64
 }
 
-func (s *AssetAmount) Mul(o interface{}) AssetAmount {
+func (s *AssetAmount) Mul(o float64) AssetAmount {
 
 	return AssetAmount{s.Asset, s.Amount * o}
 }

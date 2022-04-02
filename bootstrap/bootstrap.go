@@ -74,7 +74,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		foreignAssets = []uint64{asset1ID, asset2ID}
 	}
 
-	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(uint(asset1ID)), utils.IntToBytes(uint(asset2ID))}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
+	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
