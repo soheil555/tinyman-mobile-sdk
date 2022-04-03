@@ -3,8 +3,8 @@ package fees
 import (
 	"crypto/ed25519"
 	"fmt"
-	"tinyman-mobile-sdk/contracts"
 	"tinyman-mobile-sdk/utils"
+	"tinyman-mobile-sdk/v1/contracts"
 
 	"github.com/algorand/go-algorand-sdk/future"
 	"github.com/algorand/go-algorand-sdk/logic"

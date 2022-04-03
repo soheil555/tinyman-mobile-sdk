@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"tinyman-mobile-sdk/contracts"
 	"tinyman-mobile-sdk/utils"
+	"tinyman-mobile-sdk/v1/contracts"
 
 	"github.com/algorand/go-algorand-sdk/future"
 	"github.com/algorand/go-algorand-sdk/logic"

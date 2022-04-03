@@ -1,17 +1,17 @@
-package redeem
+package mint
 
 import (
 	"crypto/ed25519"
 	"fmt"
-	"tinyman-mobile-sdk/contracts"
 	"tinyman-mobile-sdk/utils"
+	"tinyman-mobile-sdk/v1/contracts"
 
 	"github.com/algorand/go-algorand-sdk/future"
 	"github.com/algorand/go-algorand-sdk/logic"
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, assetID uint64, assetAmount uint64, sender types.Address, suggestedParams types.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, asset1Amount uint64, asset2Amount uint64, liquidityAssetAmount uint64, sender types.Address, suggestedParams types.SuggestedParams) (utils.TransactionGroup, error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
@@ -49,29 +49,37 @@ func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID 
 		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
 	}
 
-	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("redeem")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
+	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("mint")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
 	}
 
-	var assetTransferTxn types.Transaction
+	assetTransferTxn1, err := future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), asset1Amount, nil, suggestedParams, "", asset1ID)
 
-	if assetID != 0 {
+	if err != nil {
+		return utils.TransactionGroup{}, err
+	}
 
-		assetTransferTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), assetAmount, nil, suggestedParams, "", assetID)
+	var assetTransferTxn2 types.Transaction
 
+	if asset2ID != 0 {
+		assetTransferTxn2, err = future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), asset2Amount, nil, suggestedParams, "", asset2ID)
 	} else {
-
-		assetTransferTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), assetAmount, nil, "", suggestedParams)
-
+		assetTransferTxn2, err = future.MakePaymentTxn(sender.String(), poolAddress.String(), asset2Amount, nil, "", suggestedParams)
 	}
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
 	}
 
-	txns := []types.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn}
+	assetTransferTxn3, err := future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), liquidityAssetAmount, nil, suggestedParams, "", liquidityAssetID)
+
+	if err != nil {
+		return utils.TransactionGroup{}, err
+	}
+
+	txns := []types.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn1, assetTransferTxn2, assetTransferTxn3}
 
 	txnGroup, err := utils.NewTransactionGroup(txns)
 

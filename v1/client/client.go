@@ -6,9 +6,9 @@ import (
 	"encoding/binary"
 	"reflect"
 	"tinyman-mobile-sdk/assets"
-	"tinyman-mobile-sdk/constants"
-	"tinyman-mobile-sdk/optin"
 	"tinyman-mobile-sdk/utils"
+	"tinyman-mobile-sdk/v1/constants"
+	"tinyman-mobile-sdk/v1/optin"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common"
