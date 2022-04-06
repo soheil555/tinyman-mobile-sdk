@@ -4,6 +4,7 @@ import (
 	"testing"
 	myTypes "tinyman-mobile-sdk/types"
 
+	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -88,5 +89,23 @@ func TestIntToBytes(t *testing.T) {
 	expected := []byte{0, 0, 111, 250, 214, 4, 115, 179}
 
 	assert.Equal(t, expected, IntToBytes(input))
+
+}
+
+func TestGetStateInt(t *testing.T) {
+
+	state := map[string]models.TealValue{
+		"YTE=": {
+			Uint: 1,
+		},
+		"YTI=": {
+			Uint: 2,
+		},
+	}
+
+	assert.Equal(t, uint64(1), GetStateInt(state, "a1"))
+	assert.Equal(t, uint64(2), GetStateInt(state, "a2"))
+	assert.Equal(t, uint64(2), GetStateInt(state, []byte{89, 84, 73, 61}))
+	assert.Equal(t, uint64(0), GetStateInt(state, "a3"))
 
 }

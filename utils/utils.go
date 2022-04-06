@@ -68,12 +68,14 @@ func GetProgram(definition myTypes.Definition, variables map[string]interface{})
 
 }
 
+//TODO: is value interface{} ok?
+//TODO: what about type assertion
 func EncodeValue(value interface{}, _type string) ([]byte, error) {
 
 	if _type == "int" {
 		value, ok := value.(int)
 		if !ok {
-			return nil, fmt.Errorf("can not convert value to uint64")
+			return nil, fmt.Errorf("type assertion value to int failed")
 		}
 		return EncodeVarint(uint64(value)), nil
 	} else {
@@ -185,17 +187,16 @@ func IntToBytes(num uint64) []byte {
 	return data
 }
 
-//TODO: is it correct
 func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
 
 	var keyString string
 
 	switch k := key.(type) {
 
-	case []byte:
-		keyString = b64.StdEncoding.EncodeToString([]byte(k))
 	case string:
-		keyString = k
+		keyString = b64.StdEncoding.EncodeToString([]byte(k))
+	case []byte:
+		keyString = string(k[:])
 	default:
 		//TODO: maybe return error
 		keyString = ""
@@ -209,7 +210,6 @@ func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
 
 }
 
-//TODO: is it correct
 func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 
 	var keyString string
