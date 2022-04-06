@@ -48,3 +48,17 @@ type ASC struct {
 		} `json:"validator_app"`
 	} `json:"contracts"`
 }
+
+//TODO: use from asc type
+type Definition struct {
+	Bytecode  string `json:"bytecode"`
+	Address   string `json:"address"`
+	Size      int    `json:"size"`
+	Variables []struct {
+		Name   string `json:"name"`
+		Type   string `json:"type"`
+		Index  int    `json:"index"`
+		Length int    `json:"length"`
+	} `json:"variables"`
+	Source string `json:"source"`
+}

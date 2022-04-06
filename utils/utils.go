@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	myTypes "tinyman-mobile-sdk/types"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
@@ -17,24 +18,10 @@ import (
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
-//TODO: use from asc type
-type Definition struct {
-	Bytecode  string `json:"bytecode"`
-	Address   string `json:"address"`
-	Size      int    `json:"size"`
-	Variables []struct {
-		Name   string `json:"name"`
-		Type   string `json:"type"`
-		Index  int    `json:"index"`
-		Length int    `json:"length"`
-	} `json:"variables"`
-	Source string `json:"source"`
-}
-
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition Definition, variables map[string]interface{}) ([]byte, error) {
+func GetProgram(definition myTypes.Definition, variables map[string]interface{}) ([]byte, error) {
 
 	template := definition.Bytecode
 
@@ -66,10 +53,14 @@ func GetProgram(definition Definition, variables map[string]interface{}) ([]byte
 		valueEncodedLen := len(valueEncoded)
 		diff := v.Length - valueEncodedLen
 		offset += diff
+
 		//TODO: better way for assign?
-		for i := start; i < end; i++ {
-			templateBytes[i] = valueEncoded[i-start]
-		}
+		var tmp []byte
+		tmp = append(tmp, templateBytes[:start]...)
+		tmp = append(tmp, valueEncoded...)
+		tmp = append(tmp, templateBytes[end:]...)
+
+		templateBytes = tmp
 
 	}
 
@@ -80,14 +71,18 @@ func GetProgram(definition Definition, variables map[string]interface{}) ([]byte
 func EncodeValue(value interface{}, _type string) ([]byte, error) {
 
 	if _type == "int" {
-		return EncodeVarint(value.(int)), nil
+		value, ok := value.(int)
+		if !ok {
+			return nil, fmt.Errorf("can not convert value to uint64")
+		}
+		return EncodeVarint(uint64(value)), nil
 	} else {
 		return nil, fmt.Errorf("unsupported value type %s", _type)
 	}
 
 }
 
-func EncodeVarint(number int) []byte {
+func EncodeVarint(number uint64) []byte {
 
 	buf := []byte{}
 
