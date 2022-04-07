@@ -104,7 +104,7 @@ func EncodeVarint(number uint64) []byte {
 
 }
 
-func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transaction, signedTransactions [][]byte, sender types.Address, senderSK ed25519.PrivateKey) (*algod.PendingTransactionInformation, error) {
+func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transaction, signedTransactions [][]byte, sender types.Address, senderSK ed25519.PrivateKey) (*models.PendingTransactionInfoResponse,string, error) {
 
 	for i, txn := range transactions {
 
@@ -112,7 +112,7 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transa
 			_, stx, err := crypto.SignTransaction(senderSK, txn)
 
 			if err != nil {
-				return nil, fmt.Errorf("signing failed with %v", err)
+				return nil, "",fmt.Errorf("signing failed with %v", err)
 			}
 
 			signedTransactions[i] = stx
@@ -131,7 +131,7 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transa
 	txid, err := client.SendRawTransaction(signedGroup).Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to create transaction: %v", err)
+		return nil, "",fmt.Errorf("failed to create transaction: %v", err)
 	}
 
 	return WaitForConfirmation(client, txid)
@@ -142,11 +142,11 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []types.Transa
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
-func WaitForConfirmation(client *algod.Client, txid string) (*algod.PendingTransactionInformation, error) {
+func WaitForConfirmation(client *algod.Client, txid string) (*models.PendingTransactionInfoResponse,string, error) {
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
-		return nil, fmt.Errorf("error getting algod status: %s", err)
+		return nil, "",fmt.Errorf("error getting algod status: %s", err)
 	}
 
 	lastRound := nodeStatus.LastRound
@@ -156,28 +156,34 @@ func WaitForConfirmation(client *algod.Client, txid string) (*algod.PendingTrans
 	pendingTrxInfo, _, err := txinfo.Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("error getting algod pending transaction info: %s", err)
+		return nil, "",fmt.Errorf("error getting algod pending transaction info: %s", err)
 	}
 
+
+	//TODO: is it correct?
 	for !(pendingTrxInfo.ConfirmedRound > 0) {
 
 		fmt.Println("Waiting for confirmation")
 		lastRound += 1
-		client.StatusAfterBlock(lastRound)
+		//TODO: do nothing with response?
+		_ , err := client.StatusAfterBlock(lastRound).Do(context.Background())
+		if err != nil {
+			return nil,"", fmt.Errorf("error getting algod pending transaction info: %s", err)
+		}
 
 		pendingTrxInfo, _, err = txinfo.Do(context.Background())
 
 		if err != nil {
-			return nil, fmt.Errorf("error getting algod pending transaction info: %s", err)
+			return nil,"", fmt.Errorf("error getting algod pending transaction info: %s", err)
 		}
 
 	}
 
-	//TODO: what should return and how to set txid
-	// txinfo.txid = txid
+	//TODO: is it good way to return txid
+	
 
 	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
-	return txinfo, nil
+	return &pendingTrxInfo,txid, nil
 
 }
 
@@ -305,7 +311,7 @@ func (s *TransactionGroup) SignWithPrivateKey(address types.Address, privateKey 
 
 }
 
-func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (*algod.PendingTransactionInformation, error) {
+func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (*models.PendingTransactionInfoResponse,string, error) {
 
 	var signedGroup []byte
 
@@ -318,7 +324,7 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (*algod.Pendin
 	txid, err := algod.SendRawTransaction(signedGroup).Do(context.Background())
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to send transaction: %v", err)
+		return nil, "",fmt.Errorf("failed to send transaction: %v", err)
 	}
 
 	if wait {
@@ -326,6 +332,6 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (*algod.Pendin
 	}
 
 	//TODO: we need to return txid as a struct
-	return nil, nil
+	return nil, txid,nil
 
 }

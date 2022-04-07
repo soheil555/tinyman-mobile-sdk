@@ -1,11 +1,15 @@
 package utils
 
 import (
+	"fmt"
 	"testing"
 	myTypes "tinyman-mobile-sdk/types"
 
+	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
+	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
 	"github.com/stretchr/testify/assert"
+	"gopkg.in/h2non/gock.v1"
 )
 
 func TestGetProgram(t *testing.T) {
@@ -125,5 +129,48 @@ func TestGetStateBytes(t *testing.T) {
 	assert.Equal(t, "test2", GetStateBytes(state, "a2"))
 	assert.Equal(t, "test2", GetStateBytes(state, []byte{89, 84, 73, 61}))
 	assert.Equal(t, "", GetStateBytes(state, "a3"))
+
+}
+
+// func TestSignAndSubmitTransactions(t *testing.T) {
+
+// }
+
+func TestWaitForConfirmation(t *testing.T) {
+
+	defer gock.Off()
+
+	mockServerURL := "https://mockserver.com"
+	lastRound := uint64(1)
+	txid := "4"
+
+	gock.New(mockServerURL).Get("/v2/status").
+		Reply(200).
+		JSON(map[string]uint64{
+			"last-round": lastRound,
+		})
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/status/wait-for-block-after/%v", lastRound+1)).
+		Reply(200).JSON(map[string]uint64{
+		"last-round": lastRound + 1,
+	})
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/transactions/pending/%s", txid)).
+		Reply(200).JSON(msgpack.Encode(map[string]uint64{
+		"confirmed-round": 0,
+	}))
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/transactions/pending/%s", txid)).
+		Reply(200).JSON(msgpack.Encode(map[string]uint64{
+		"confirmed-round": lastRound + 1,
+	}))
+
+	mockClient, err := algod.MakeClient(mockServerURL, "")
+	assert.Nil(t, err)
+
+	result, resultTxid, err := WaitForConfirmation(mockClient, txid)
+	assert.Nil(t, err)
+	assert.Equal(t, txid, resultTxid)
+	assert.Equal(t, lastRound+1, result.ConfirmedRound)
 
 }
