@@ -97,7 +97,7 @@ func (s *TinymanClient) FetchAsset(assetID uint64) assets.Asset {
 
 }
 
-func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (*algod.PendingTransactionInformation, error) {
+func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (*models.PendingTransactionInfoResponse, string, error) {
 
 	//TODO: maybe better way
 	var signedGroup []byte
@@ -110,15 +110,14 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 	txid, err := sendRawTransaction.Do(context.Background())
 
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	if wait {
 		return utils.WaitForConfirmation(s.Algod, txid)
 	}
 
-	//TODO: return txid
-	return nil, nil
+	return nil, txid, nil
 
 }
 

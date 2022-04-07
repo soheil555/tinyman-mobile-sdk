@@ -1,13 +1,17 @@
 package utils
 
 import (
+	b64 "encoding/base64"
 	"fmt"
 	"testing"
 	myTypes "tinyman-mobile-sdk/types"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
+	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/encoding/msgpack"
+	"github.com/algorand/go-algorand-sdk/future"
+	"github.com/algorand/go-algorand-sdk/types"
 	"github.com/stretchr/testify/assert"
 	"gopkg.in/h2non/gock.v1"
 )
@@ -171,6 +175,74 @@ func TestWaitForConfirmation(t *testing.T) {
 	result, resultTxid, err := WaitForConfirmation(mockClient, txid)
 	assert.Nil(t, err)
 	assert.Equal(t, txid, resultTxid)
+	assert.Equal(t, lastRound+1, result.ConfirmedRound)
+
+}
+
+func TestSignAndSubmitTransactions(t *testing.T) {
+
+	defer gock.Off()
+
+	mockServerURL := "https://mockserver.com"
+	lastRound := uint64(1)
+	txid := "4"
+
+	gock.New(mockServerURL).Post("/v2/transactions").
+		Reply(200).
+		JSON(map[string]string{
+			"txId": txid,
+		})
+
+	gock.New(mockServerURL).Get("/v2/status").
+		Reply(200).
+		JSON(map[string]uint64{
+			"last-round": lastRound,
+		})
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/status/wait-for-block-after/%v", lastRound+1)).
+		Reply(200).JSON(map[string]uint64{
+		"last-round": lastRound + 1,
+	})
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/transactions/pending/%s", txid)).
+		Reply(200).JSON(msgpack.Encode(map[string]uint64{
+		"confirmed-round": 0,
+	}))
+
+	gock.New(mockServerURL).Get(fmt.Sprintf("/v2/transactions/pending/%s", txid)).
+		Reply(200).JSON(msgpack.Encode(map[string]uint64{
+		"confirmed-round": lastRound + 1,
+	}))
+
+	account1 := crypto.GenerateAccount()
+	account2 := crypto.GenerateAccount()
+
+	genesisHash := "f4OxZX/x/FO5LcGBSKHWXfwtSx+j1ncoSt3SABJtkGk="
+	genesisBytes, _ := b64.StdEncoding.DecodeString(genesisHash)
+
+	params := types.SuggestedParams{
+		Fee:             0,
+		FirstRoundValid: 1,
+		LastRoundValid:  100,
+		GenesisHash:     genesisBytes,
+	}
+
+	txn1, err := future.MakePaymentTxn(account1.Address.String(), account2.Address.String(), 1000, nil, "", params)
+	assert.Nil(t, err)
+
+	txn2, err := future.MakePaymentTxn(account1.Address.String(), account2.Address.String(), 2000, nil, "", params)
+	assert.Nil(t, err)
+
+	transactions := []types.Transaction{txn1, txn2}
+
+	mockClient, err := algod.MakeClient(mockServerURL, "")
+	assert.Nil(t, err)
+
+	//TODO: what to do with signed transactions
+	signedTransactions := make([][]byte, 2)
+	result, restulTxid, err := SignAndSubmitTransactions(mockClient, transactions, signedTransactions, account1.Address, account1.PrivateKey)
+	assert.Nil(t, err)
+	assert.Equal(t, txid, restulTxid)
 	assert.Equal(t, lastRound+1, result.ConfirmedRound)
 
 }
