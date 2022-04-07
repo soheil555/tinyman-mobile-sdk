@@ -109,3 +109,21 @@ func TestGetStateInt(t *testing.T) {
 	assert.Equal(t, uint64(0), GetStateInt(state, "a3"))
 
 }
+
+func TestGetStateBytes(t *testing.T) {
+
+	state := map[string]models.TealValue{
+		"YTE=": {
+			Bytes: "test1",
+		},
+		"YTI=": {
+			Bytes: "test2",
+		},
+	}
+
+	assert.Equal(t, "test1", GetStateBytes(state, "a1"))
+	assert.Equal(t, "test2", GetStateBytes(state, "a2"))
+	assert.Equal(t, "test2", GetStateBytes(state, []byte{89, 84, 73, 61}))
+	assert.Equal(t, "", GetStateBytes(state, "a3"))
+
+}
