@@ -72,11 +72,18 @@ func GetProgram(definition myTypes.Definition, variables map[string]interface{})
 func EncodeValue(value interface{}, _type string) ([]byte, error) {
 
 	if _type == "int" {
-		value, ok := value.(uint64)
-		if !ok {
-			return nil, fmt.Errorf("type assertion value to int failed")
+
+		switch v := value.(type) {
+
+		case int:
+			return EncodeVarint(uint64(v)), nil
+		case uint64:
+			return EncodeVarint(v), nil
+		default:
+			return nil, fmt.Errorf("only int or uint64 type is valid for value")
+
 		}
-		return EncodeVarint(value), nil
+
 	} else {
 		return nil, fmt.Errorf("unsupported value type %s", _type)
 	}
