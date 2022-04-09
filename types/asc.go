@@ -5,20 +5,9 @@ type ASC struct {
 	Ref       string `json:"ref"`
 	Contracts struct {
 		PoolLogicsig struct {
-			Type  string `json:"type"`
-			Logic struct {
-				Bytecode  string `json:"bytecode"`
-				Address   string `json:"address"`
-				Size      int    `json:"size"`
-				Variables []struct {
-					Name   string `json:"name"`
-					Type   string `json:"type"`
-					Index  int    `json:"index"`
-					Length int    `json:"length"`
-				} `json:"variables"`
-				Source string `json:"source"`
-			} `json:"logic"`
-			Name string `json:"name"`
+			Type  string          `json:"type"`
+			Logic LogicDefinition `json:"logic"`
+			Name  string          `json:"name"`
 		} `json:"pool_logicsig"`
 		ValidatorApp struct {
 			Type            string `json:"type"`
@@ -49,8 +38,7 @@ type ASC struct {
 	} `json:"contracts"`
 }
 
-//TODO: use from asc type
-type Definition struct {
+type LogicDefinition struct {
 	Bytecode  string `json:"bytecode"`
 	Address   string `json:"address"`
 	Size      int    `json:"size"`
