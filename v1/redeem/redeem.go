@@ -9,12 +9,12 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, assetID uint64, assetAmount uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, assetID uint64, assetAmount uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
@@ -22,7 +22,7 @@ func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID 
 	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", suggestedParams)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	var foreignAssets []uint64
@@ -36,7 +36,7 @@ func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID 
 	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("redeem")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	var assetTransferTxn algoTypes.Transaction
@@ -52,22 +52,22 @@ func PrepareRedeemTransactions(validatorAppId uint64, asset1ID uint64, asset2ID 
 	}
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	txns := []algoTypes.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn}
 
-	txnGroup, err := utils.NewTransactionGroup(txns)
+	txnGroup, err = utils.NewTransactionGroup(txns)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }

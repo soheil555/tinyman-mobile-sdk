@@ -25,12 +25,12 @@ func readContractsFile(fileName string) (data types.ASC, err error) {
 
 }
 
-func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (algoTypes.LogicSig, error) {
+func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (lsig algoTypes.LogicSig, err error) {
 
 	contracts, err := readContractsFile("../asc.json")
 
 	if err != nil {
-		return algoTypes.LogicSig{}, err
+		return
 	}
 
 	poolLogicsigDef := contracts.Contracts.PoolLogicsig.Logic
@@ -50,19 +50,19 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (a
 
 	programBytes, err := utils.GetProgram(poolLogicsigDef, variables)
 	if err != nil {
-		return algoTypes.LogicSig{}, err
+		return
 	}
 
 	var args [][]byte
 
 	ma := crypto.MultisigAccount{}
 
-	lsig, err := crypto.MakeLogicSig(programBytes, args, nil, ma)
+	lsig, err = crypto.MakeLogicSig(programBytes, args, nil, ma)
 
 	if err != nil {
-		return algoTypes.LogicSig{}, err
+		return
 	}
 
-	return lsig, nil
+	return
 
 }

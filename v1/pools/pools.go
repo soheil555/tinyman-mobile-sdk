@@ -47,11 +47,11 @@ type PoolInfo struct {
 	LastRefreshedRound              uint64
 }
 
-func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, asset2ID uint64) (PoolInfo, error) {
+func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, asset2ID uint64) (poolInfo PoolInfo, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppID, asset1ID, asset2ID)
 	if err != nil {
-		return PoolInfo{}, err
+		return
 	}
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
@@ -61,18 +61,17 @@ func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, as
 
 }
 
-func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (PoolInfo, error) {
+func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (poolInfo PoolInfo, err error) {
 
 	//TODO: more on make()
-	var poolInfo PoolInfo
 
 	accountInfoResponse, err := accountInfo.Do(context.Background())
 	if err != nil {
-		return poolInfo, err
+		return
 	}
 
 	if len(accountInfoResponse.AppsLocalState) == 0 {
-		return poolInfo, nil
+		return
 	}
 
 	validatorAppID := accountInfoResponse.AppsLocalState[0].Id
@@ -90,13 +89,14 @@ func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (PoolInfo
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppID, asset1ID, asset2ID)
 
 	if err != nil {
-		return poolInfo, err
+		return
 	}
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	if accountInfoResponse.Address != poolAddress.String() {
-		return poolInfo, fmt.Errorf("accountInfo address is not equal to poolAddress")
+		err = fmt.Errorf("accountInfo address is not equal to poolAddress")
+		return
 	}
 
 	asset1Reserves := utils.GetStateInt(validatorAppState, "s1")
@@ -142,7 +142,7 @@ func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (PoolInfo
 		Round:                           accountInfoResponse.Round,
 	}
 
-	return poolInfo, nil
+	return
 
 }
 

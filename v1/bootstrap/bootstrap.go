@@ -1,15 +1,14 @@
 package bootstrap
 
 import (
-	"crypto/ed25519"
 	"fmt"
 	"strconv"
 	"strings"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/contracts"
 
+	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/future"
-	"github.com/algorand/go-algorand-sdk/logic"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
@@ -23,31 +22,19 @@ func Hex2Int(hexStr string) uint64 {
 
 }
 
-func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, asset1UnitName string, asset2UnitName string, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, asset1UnitName string, asset2UnitName string, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	//TODO: what is pool address
-	_, bytesArrays, err := logic.ReadProgram(poolLogicsig.Logic, nil)
-
-	if err != nil {
-		return utils.TransactionGroup{}, err
-	}
-
-	var poolAddress algoTypes.Address
-
-	n := copy(poolAddress[:], bytesArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return utils.TransactionGroup{}, fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	if asset1ID > asset2ID {
-		return utils.TransactionGroup{}, fmt.Errorf("asset2ID must be greate than equal asset1ID")
+		err = fmt.Errorf("asset2ID must be greate than equal asset1ID")
+		return
 	}
 
 	if asset2ID == 0 {
@@ -63,7 +50,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), paymentTxnAmount, []byte("fee"), "", suggestedParams)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	var foreignAssets []uint64
@@ -77,45 +64,44 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	assetCreateTxn, err := future.MakeAssetCreateTxn(poolAddress.String(), nil, suggestedParams, Hex2Int("0xFFFFFFFFFFFFFFFF"), 6, false, "", "", "", "", "TMPOOL11", fmt.Sprintf("TinymanPool1.1 {%s}-{%s}", asset1UnitName, asset2UnitName), "https://tinyman.org", "")
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	//TODO: is it the same as AssetOptInTxn
 	assetOptInTxn1, err := future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset1ID)
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	txns := []algoTypes.Transaction{paymentTxn, applicationOptInTxn, assetCreateTxn, assetOptInTxn1}
 
 	if asset2ID > 0 {
 
-		assetOptInTxn2, err := future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset2ID)
+		var assetOptInTxn2 algoTypes.Transaction
+		assetOptInTxn2, err = future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset2ID)
 		if err != nil {
-			return utils.TransactionGroup{}, err
+			return
 		}
 
 		txns = append(txns, assetOptInTxn2)
 
 	}
 
-	txnGroup, err := utils.NewTransactionGroup(txns)
-
+	txnGroup, err = utils.NewTransactionGroup(txns)
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
-
+	return
 }

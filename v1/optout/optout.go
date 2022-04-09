@@ -8,19 +8,21 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func GetOptoutTransactions(client algod.Client, sender algoTypes.Address, validatorAppId uint64) ([]algoTypes.Transaction, error) {
+func GetOptoutTransactions(client algod.Client, sender algoTypes.Address, validatorAppId uint64) (transactions []algoTypes.Transaction, err error) {
 
 	suggestedParams, err := client.SuggestedParams().Do(context.Background())
 
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	txn, err := future.MakeApplicationClearStateTx(validatorAppId, nil, nil, nil, nil, suggestedParams, sender, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	return []algoTypes.Transaction{txn}, nil
+	transactions = []algoTypes.Transaction{txn}
+
+	return
 }

@@ -9,12 +9,12 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, asset1Amount uint64, asset2Amount uint64, liquidityAssetAmount uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, asset1Amount uint64, asset2Amount uint64, liquidityAssetAmount uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
@@ -22,7 +22,7 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", suggestedParams)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	var foreignAssets []uint64
@@ -36,13 +36,13 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("mint")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	assetTransferTxn1, err := future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), asset1Amount, nil, suggestedParams, "", asset1ID)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	var assetTransferTxn2 algoTypes.Transaction
@@ -54,28 +54,29 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	}
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	assetTransferTxn3, err := future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), liquidityAssetAmount, nil, suggestedParams, "", liquidityAssetID)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	txns := []algoTypes.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn1, assetTransferTxn2, assetTransferTxn3}
 
-	txnGroup, err := utils.NewTransactionGroup(txns)
+	txnGroup, err = utils.NewTransactionGroup(txns)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	//TODO: it is not required
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }

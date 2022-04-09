@@ -33,21 +33,20 @@ func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddr
 	}
 }
 
-func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (TinymanClient, error) {
+func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
 	//TODO: better way
+	//TODO: I think testnet client is changed
 	if reflect.DeepEqual(algodClient, algod.Client{}) {
 
 		headers := []*common.Header{
 			{Key: "User-Agent", Value: "algosdk"},
 		}
 
-		var err error
-
 		algodClient, err = algod.MakeClientWithHeaders("https://api.testnet.algoexplorer.io", "", headers)
 
 		if err != nil {
-			return TinymanClient{}, err
+			return
 		}
 
 	}
@@ -56,7 +55,7 @@ func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Ad
 
 }
 
-func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (TinymanClient, error) {
+func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
 	//TODO: better way
 	if reflect.DeepEqual(algodClient, algod.Client{}) {
@@ -65,11 +64,10 @@ func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Ad
 			{Key: "User-Agent", Value: "algosdk"},
 		}
 
-		var err error
 		algodClient, err = algod.MakeClientWithHeaders("https://api.algoexplorer.io", "", headers)
 
 		if err != nil {
-			return TinymanClient{}, err
+			return
 		}
 
 	}
@@ -79,8 +77,8 @@ func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Ad
 }
 
 //TODO: implement later
+//TODO: cycle import error
 func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
-
 }
 
 func (s *TinymanClient) FetchAsset(assetID uint64) types.Asset {
@@ -121,7 +119,7 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 
 }
 
-func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Address) (utils.TransactionGroup, error) {
+func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
 
 	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
@@ -129,20 +127,20 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Addres
 
 	suggestedParams, err := s.Algod.SuggestedParams().Do(context.Background())
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	txnGroup, err := optin.PrepareAppOptinTransactions(s.ValidatorAppId, userAddress, suggestedParams)
+	txnGroup, err = optin.PrepareAppOptinTransactions(s.ValidatorAppId, userAddress, suggestedParams)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }
 
-func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddress algoTypes.Address) (utils.TransactionGroup, error) {
+func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
 
 	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
@@ -150,23 +148,23 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddres
 
 	suggestedParams, err := s.Algod.SuggestedParams().Do(context.Background())
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	txnGroup, err := optin.PrepareAssetOptinTransactions(assetID, userAddress, suggestedParams)
+	txnGroup, err = optin.PrepareAssetOptinTransactions(assetID, userAddress, suggestedParams)
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }
 
-func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[string]map[types.Asset]types.AssetAmount, error) {
+func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools map[string]map[types.Asset]types.AssetAmount, err error) {
 
 	//TODO: is pools type ok?
-	pools := make(map[string]map[types.Asset]types.AssetAmount)
+	pools = make(map[string]map[types.Asset]types.AssetAmount)
 
 	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
@@ -174,7 +172,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[s
 
 	accountInfo, err := s.Algod.AccountInformation(userAddress.String()).Do(context.Background())
 	if err != nil {
-		return nil, err
+		return
 	}
 
 	var validatorApps []models.ApplicationLocalState
@@ -191,7 +189,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[s
 	if len(validatorApps) > 0 {
 		validatorApp = validatorApps[0]
 	} else {
-		return pools, nil
+		return
 	}
 
 	validatorAppState := make(map[string]models.TealValue)
@@ -203,9 +201,10 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[s
 	}
 
 	for key := range validatorAppState {
-		b, err := b64.StdEncoding.DecodeString(key)
+		var b []byte
+		b, err = b64.StdEncoding.DecodeString(key)
 		if err != nil {
-			return nil, err
+			return
 		}
 
 		bLen := len(b)
@@ -213,10 +212,11 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[s
 		//TODO: is it correct?
 		if bLen >= 9 && b[bLen-9] == 101 {
 			value := validatorAppState[key].Uint
-			poolAddress, err := algoTypes.EncodeAddress(b[:bLen-9])
+			var poolAddress string
+			poolAddress, err = algoTypes.EncodeAddress(b[:bLen-9])
 
 			if err != nil {
-				return nil, err
+				return
 			}
 
 			if pool, ok := pools[poolAddress]; ok {
@@ -231,7 +231,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[s
 
 	}
 
-	return pools, nil
+	return
 
 }
 

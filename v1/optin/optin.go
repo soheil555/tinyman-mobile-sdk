@@ -7,42 +7,44 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
 	txn, err := future.MakeApplicationOptInTx(validatorAppId, nil, nil, nil, nil, suggestedParams, sender, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	transactions := []algoTypes.Transaction{txn}
 
-	txnGroup, err := utils.NewTransactionGroup(transactions)
+	txnGroup, err = utils.NewTransactionGroup(transactions)
 
+	//TODO: it is not required
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }
 
-func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
 	//TODO: is it the same as AssetOptInTxn
 	txn, err := future.MakeAssetTransferTxn(sender.String(), sender.String(), 0, nil, suggestedParams, "", assetID)
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
 	transactions := []algoTypes.Transaction{txn}
 
-	txnGroup, err := utils.NewTransactionGroup(transactions)
+	txnGroup, err = utils.NewTransactionGroup(transactions)
 
+	//TODO: it is not required
 	if err != nil {
-		return utils.TransactionGroup{}, err
+		return
 	}
 
-	return txnGroup, nil
+	return
 
 }
