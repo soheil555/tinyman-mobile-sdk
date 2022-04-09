@@ -4,35 +4,33 @@ import (
 	"encoding/json"
 	"os"
 	"sort"
-	myTypes "tinyman-mobile-sdk/types"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func readContractsFile(fileName string) (myTypes.ASC, error) {
-
-	datas := myTypes.ASC{}
+func readContractsFile(fileName string) (data types.ASC, err error) {
 
 	file, err := os.ReadFile(fileName)
 
 	if err != nil {
-		return myTypes.ASC{}, err
+		return
 	}
 
-	json.Unmarshal(file, &datas)
+	json.Unmarshal(file, &data)
 
-	return datas, nil
+	return
 
 }
 
-func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (types.LogicSig, error) {
+func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (algoTypes.LogicSig, error) {
 
 	contracts, err := readContractsFile("../asc.json")
 
 	if err != nil {
-		return types.LogicSig{}, err
+		return algoTypes.LogicSig{}, err
 	}
 
 	poolLogicsigDef := contracts.Contracts.PoolLogicsig.Logic
@@ -52,7 +50,7 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (t
 
 	programBytes, err := utils.GetProgram(poolLogicsigDef, variables)
 	if err != nil {
-		return types.LogicSig{}, err
+		return algoTypes.LogicSig{}, err
 	}
 
 	var args [][]byte
@@ -62,7 +60,7 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (t
 	lsig, err := crypto.MakeLogicSig(programBytes, args, nil, ma)
 
 	if err != nil {
-		return types.LogicSig{}, err
+		return algoTypes.LogicSig{}, err
 	}
 
 	return lsig, nil

@@ -4,18 +4,18 @@ import (
 	"tinyman-mobile-sdk/utils"
 
 	"github.com/algorand/go-algorand-sdk/future"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareAppOptinTransactions(validatorAppId uint64, sender types.Address, suggestedParams types.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
 
-	txn, err := future.MakeApplicationOptInTx(validatorAppId, nil, nil, nil, nil, suggestedParams, sender, nil, types.Digest{}, [32]byte{}, types.Address{})
+	txn, err := future.MakeApplicationOptInTx(validatorAppId, nil, nil, nil, nil, suggestedParams, sender, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
 	}
 
-	transactions := []types.Transaction{txn}
+	transactions := []algoTypes.Transaction{txn}
 
 	txnGroup, err := utils.NewTransactionGroup(transactions)
 
@@ -27,7 +27,7 @@ func PrepareAppOptinTransactions(validatorAppId uint64, sender types.Address, su
 
 }
 
-func PrepareAssetOptinTransactions(assetID uint64, sender types.Address, suggestedParams types.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
 
 	//TODO: is it the same as AssetOptInTxn
 	txn, err := future.MakeAssetTransferTxn(sender.String(), sender.String(), 0, nil, suggestedParams, "", assetID)
@@ -35,7 +35,7 @@ func PrepareAssetOptinTransactions(assetID uint64, sender types.Address, suggest
 		return utils.TransactionGroup{}, err
 	}
 
-	transactions := []types.Transaction{txn}
+	transactions := []algoTypes.Transaction{txn}
 
 	txnGroup, err := utils.NewTransactionGroup(transactions)
 

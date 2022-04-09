@@ -10,7 +10,7 @@ import (
 
 	"github.com/algorand/go-algorand-sdk/future"
 	"github.com/algorand/go-algorand-sdk/logic"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 func Hex2Int(hexStr string) uint64 {
@@ -23,7 +23,7 @@ func Hex2Int(hexStr string) uint64 {
 
 }
 
-func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, asset1UnitName string, asset2UnitName string, sender types.Address, suggestedParams types.SuggestedParams) (utils.TransactionGroup, error) {
+func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, asset1UnitName string, asset2UnitName string, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (utils.TransactionGroup, error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
@@ -38,7 +38,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		return utils.TransactionGroup{}, err
 	}
 
-	var poolAddress types.Address
+	var poolAddress algoTypes.Address
 
 	n := copy(poolAddress[:], bytesArrays[1])
 
@@ -74,7 +74,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		foreignAssets = []uint64{asset1ID, asset2ID}
 	}
 
-	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, types.Digest{}, [32]byte{}, types.Address{})
+	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return utils.TransactionGroup{}, err
@@ -92,7 +92,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		return utils.TransactionGroup{}, err
 	}
 
-	txns := []types.Transaction{paymentTxn, applicationOptInTxn, assetCreateTxn, assetOptInTxn1}
+	txns := []algoTypes.Transaction{paymentTxn, applicationOptInTxn, assetCreateTxn, assetOptInTxn1}
 
 	if asset2ID > 0 {
 

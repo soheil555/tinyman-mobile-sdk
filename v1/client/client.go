@@ -5,7 +5,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/binary"
 	"reflect"
-	"tinyman-mobile-sdk/assets"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/constants"
 	"tinyman-mobile-sdk/v1/optin"
@@ -13,27 +13,27 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 type TinymanClient struct {
 	Algod          *algod.Client
 	ValidatorAppId uint64
-	AssetsCache    map[uint64]assets.Asset
-	UserAddress    types.Address
+	AssetsCache    map[uint64]types.Asset
+	UserAddress    algoTypes.Address
 }
 
-func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddress types.Address) TinymanClient {
+func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
 
 	return TinymanClient{
 		algodClient,
 		validatorAppId,
-		map[uint64]assets.Asset{},
+		map[uint64]types.Asset{},
 		userAddress,
 	}
 }
 
-func NewTinymanTestnetClient(algodClient *algod.Client, userAddress types.Address) (TinymanClient, error) {
+func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (TinymanClient, error) {
 
 	//TODO: better way
 	if reflect.DeepEqual(algodClient, algod.Client{}) {
@@ -56,7 +56,7 @@ func NewTinymanTestnetClient(algodClient *algod.Client, userAddress types.Addres
 
 }
 
-func NewTinymanMainnetClient(algodClient *algod.Client, userAddress types.Address) (TinymanClient, error) {
+func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (TinymanClient, error) {
 
 	//TODO: better way
 	if reflect.DeepEqual(algodClient, algod.Client{}) {
@@ -83,11 +83,11 @@ func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch 
 
 }
 
-func (s *TinymanClient) FetchAsset(assetID uint64) assets.Asset {
+func (s *TinymanClient) FetchAsset(assetID uint64) types.Asset {
 
 	if _, ok := s.AssetsCache[assetID]; !ok {
 
-		asset := assets.Asset{Id: assetID}
+		asset := types.Asset{Id: assetID}
 		asset.Fetch(s.Algod)
 		s.AssetsCache[assetID] = asset
 
@@ -97,7 +97,7 @@ func (s *TinymanClient) FetchAsset(assetID uint64) assets.Asset {
 
 }
 
-func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (*models.PendingTransactionInfoResponse, string, error) {
+func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
 	//TODO: maybe better way
 	var signedGroup []byte
@@ -107,23 +107,23 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 	}
 
 	sendRawTransaction := s.Algod.SendRawTransaction(signedGroup)
-	txid, err := sendRawTransaction.Do(context.Background())
+	Txid, err = sendRawTransaction.Do(context.Background())
 
 	if err != nil {
-		return nil, "", err
+		return
 	}
 
 	if wait {
-		return utils.WaitForConfirmation(s.Algod, txid)
+		return utils.WaitForConfirmation(s.Algod, Txid)
 	}
 
-	return nil, txid, nil
+	return
 
 }
 
-func (s *TinymanClient) PrepareAppOptinTransactions(userAddress types.Address) (utils.TransactionGroup, error) {
+func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
-	if (userAddress == types.Address{}) {
+	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
 	}
 
@@ -142,9 +142,9 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress types.Address) (
 
 }
 
-func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddress types.Address) (utils.TransactionGroup, error) {
+func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
-	if (userAddress == types.Address{}) {
+	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
 	}
 
@@ -163,12 +163,12 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddres
 
 }
 
-func (s *TinymanClient) FetchExcessAmounts(userAddress types.Address) (map[string]map[assets.Asset]assets.AssetAmount, error) {
+func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (map[string]map[types.Asset]types.AssetAmount, error) {
 
 	//TODO: is pools type ok?
-	pools := make(map[string]map[assets.Asset]assets.AssetAmount)
+	pools := make(map[string]map[types.Asset]types.AssetAmount)
 
-	if (userAddress == types.Address{}) {
+	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
 	}
 
@@ -213,7 +213,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress types.Address) (map[strin
 		//TODO: is it correct?
 		if bLen >= 9 && b[bLen-9] == 101 {
 			value := validatorAppState[key].Uint
-			poolAddress, err := types.EncodeAddress(b[:bLen-9])
+			poolAddress, err := algoTypes.EncodeAddress(b[:bLen-9])
 
 			if err != nil {
 				return nil, err
@@ -225,7 +225,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress types.Address) (map[strin
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
 			asset := s.FetchAsset(assetID)
-			pools[poolAddress][asset] = assets.AssetAmount{Asset: asset, Amount: float64(value)}
+			pools[poolAddress][asset] = types.AssetAmount{Asset: asset, Amount: float64(value)}
 
 		}
 
@@ -235,9 +235,9 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress types.Address) (map[strin
 
 }
 
-func (s *TinymanClient) IsOptIn(userAddress types.Address) (bool, error) {
+func (s *TinymanClient) IsOptIn(userAddress algoTypes.Address) (bool, error) {
 
-	if (userAddress == types.Address{}) {
+	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
 	}
 
@@ -255,9 +255,9 @@ func (s *TinymanClient) IsOptIn(userAddress types.Address) (bool, error) {
 	return false, nil
 }
 
-func (s *TinymanClient) AssetIsOptedIn(assetID uint64, userAddress types.Address) (bool, error) {
+func (s *TinymanClient) AssetIsOptedIn(assetID uint64, userAddress algoTypes.Address) (bool, error) {
 
-	if (userAddress == types.Address{}) {
+	if (userAddress == algoTypes.Address{}) {
 		userAddress = s.UserAddress
 	}
 

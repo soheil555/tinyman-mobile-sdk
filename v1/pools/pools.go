@@ -5,7 +5,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"math"
-	"tinyman-mobile-sdk/assets"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/bootstrap"
 	"tinyman-mobile-sdk/v1/burn"
@@ -20,14 +20,14 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/crypto"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 //TODO: move to another file
 //TODO: Address type
 //TODO: round vs lastRefreshedRound
 type PoolInfo struct {
-	Address                         types.Address
+	Address                         algoTypes.Address
 	Asset1ID                        uint64
 	Asset2ID                        uint64
 	Asset1UnitName                  string
@@ -148,7 +148,7 @@ func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (PoolInfo
 
 //TODO: maybe all addresses must be string
 func GetExcessAssetKey(poolAddress string, assetID uint64) ([]byte, error) {
-	a, err := types.DecodeAddress(poolAddress)
+	a, err := algoTypes.DecodeAddress(poolAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -164,13 +164,13 @@ func GetExcessAssetKey(poolAddress string, assetID uint64) ([]byte, error) {
 
 type SwapQuote struct {
 	SwapType  string
-	AmountIn  assets.AssetAmount
-	AmountOut assets.AssetAmount
-	SwapFees  assets.AssetAmount
+	AmountIn  types.AssetAmount
+	AmountOut types.AssetAmount
+	SwapFees  types.AssetAmount
 	Slippage  float64
 }
 
-func (s *SwapQuote) AmountOutWithSlippage() (assets.AssetAmount, error) {
+func (s *SwapQuote) AmountOutWithSlippage() (types.AssetAmount, error) {
 
 	if s.SwapType == "fixed-output" {
 		return s.AmountOut, nil
@@ -178,7 +178,7 @@ func (s *SwapQuote) AmountOutWithSlippage() (assets.AssetAmount, error) {
 
 	assetAmount, err := s.AmountOut.Sub(s.AmountOut.Mul(s.Slippage))
 	if err != nil {
-		return assets.AssetAmount{}, err
+		return types.AssetAmount{}, err
 	}
 
 	return assetAmount, nil
@@ -186,7 +186,7 @@ func (s *SwapQuote) AmountOutWithSlippage() (assets.AssetAmount, error) {
 }
 
 //TODO: pointer or not pointer ?
-func (s *SwapQuote) AmountInWithSlippage() (assets.AssetAmount, error) {
+func (s *SwapQuote) AmountInWithSlippage() (types.AssetAmount, error) {
 
 	if s.SwapType == "fixed-input" {
 		return s.AmountIn, nil
@@ -194,7 +194,7 @@ func (s *SwapQuote) AmountInWithSlippage() (assets.AssetAmount, error) {
 
 	assetAmount, err := s.AmountIn.Add(s.AmountIn.Mul(s.Slippage))
 	if err != nil {
-		return assets.AssetAmount{}, err
+		return types.AssetAmount{}, err
 	}
 
 	return assetAmount, nil
@@ -224,31 +224,31 @@ func (s *SwapQuote) PriceWithSlippage() (float64, error) {
 }
 
 type MintQuote struct {
-	AmountsIn            map[assets.Asset]assets.AssetAmount
-	LiquidityAssetAmount assets.AssetAmount
+	AmountsIn            map[types.Asset]types.AssetAmount
+	LiquidityAssetAmount types.AssetAmount
 	Slippage             float64
 }
 
 //TODO: in python code it return int?
-func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assets.AssetAmount, error) {
+func (s *MintQuote) LiquidityAssetAmountWithSlippage() (types.AssetAmount, error) {
 	assetAmount, err := s.LiquidityAssetAmount.Sub(s.LiquidityAssetAmount.Mul(s.Slippage))
 
 	if err != nil {
-		return assets.AssetAmount{}, err
+		return types.AssetAmount{}, err
 	}
 
 	return assetAmount, nil
 }
 
 type BurnQuote struct {
-	AmountsOut           map[assets.Asset]*assets.AssetAmount
-	LiquidityAssetAmount assets.AssetAmount
+	AmountsOut           map[types.Asset]*types.AssetAmount
+	LiquidityAssetAmount types.AssetAmount
 	Slippage             float64
 }
 
-func (s *BurnQuote) AmountsOutWithSlippage() (map[assets.Asset]assets.AssetAmount, error) {
+func (s *BurnQuote) AmountsOutWithSlippage() (map[types.Asset]types.AssetAmount, error) {
 
-	out := make(map[assets.Asset]assets.AssetAmount)
+	out := make(map[types.Asset]types.AssetAmount)
 
 	for k := range s.AmountsOut {
 		amountOutWithSlippage, err := s.AmountsOut[k].Sub(s.AmountsOut[k].Mul(s.Slippage))
@@ -268,10 +268,10 @@ func (s *BurnQuote) AmountsOutWithSlippage() (map[assets.Asset]assets.AssetAmoun
 type Pool struct {
 	Client                          client.TinymanClient
 	ValidatorAppID                  uint64
-	Asset1                          assets.Asset
-	Asset2                          assets.Asset
+	Asset1                          types.Asset
+	Asset2                          types.Asset
 	Exists                          bool
-	LiquidityAsset                  assets.Asset
+	LiquidityAsset                  types.Asset
 	Asset1Reserves                  uint64
 	Asset2Reserves                  uint64
 	IssuedLiquidity                 uint64
@@ -304,7 +304,7 @@ func NewPool(client client.TinymanClient, assetA interface{}, assetB interface{}
 
 	case uint64:
 		pool.Asset1 = client.FetchAsset(v)
-	case assets.Asset:
+	case types.Asset:
 		pool.Asset1 = v
 	default:
 		return Pool{}, fmt.Errorf("unsupported type for assetA")
@@ -315,7 +315,7 @@ func NewPool(client client.TinymanClient, assetA interface{}, assetB interface{}
 
 	case uint64:
 		pool.Asset2 = client.FetchAsset(v)
-	case assets.Asset:
+	case types.Asset:
 		pool.Asset2 = v
 	default:
 		return Pool{}, fmt.Errorf("unsupported type for assetB")
@@ -383,7 +383,7 @@ func (s *Pool) UpdateFromInfo(info PoolInfo) {
 	}
 
 	//TODO: asset Id to ID maybe
-	s.LiquidityAsset = assets.Asset{Id: info.LiquidityAssetID, Name: info.LiquidityAssetName, UnitName: "TMPOOL11", Decimals: 6}
+	s.LiquidityAsset = types.Asset{Id: info.LiquidityAssetID, Name: info.LiquidityAssetName, UnitName: "TMPOOL11", Decimals: 6}
 	s.Asset1Reserves = info.Asset1Reserves
 	s.Asset2Reserves = info.Asset2Reserves
 	s.IssuedLiquidity = info.IssuedLiquidity
@@ -402,23 +402,23 @@ func (s *Pool) UpdateFromInfo(info PoolInfo) {
 
 }
 
-func (s *Pool) GetLogicsig() (types.LogicSig, error) {
+func (s *Pool) GetLogicsig() (algoTypes.LogicSig, error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
 	if err != nil {
-		return types.LogicSig{}, err
+		return algoTypes.LogicSig{}, err
 	}
 
 	return poolLogicsig, nil
 
 }
 
-func (s *Pool) Address() (types.Address, error) {
+func (s *Pool) Address() (algoTypes.Address, error) {
 
 	logicsig, err := s.GetLogicsig()
 
 	if err != nil {
-		return types.Address{}, err
+		return algoTypes.Address{}, err
 	}
 
 	poolAddress := crypto.AddressFromProgram(logicsig.Logic)
@@ -466,22 +466,22 @@ func (s *Pool) Info() (PoolInfo, error) {
 
 }
 
-func (s *Pool) Convert(amount assets.AssetAmount) assets.AssetAmount {
+func (s *Pool) Convert(amount types.AssetAmount) types.AssetAmount {
 
 	if amount.Asset == s.Asset1 {
 		//TODO:maybe convert to int
-		return assets.AssetAmount{Asset: s.Asset2, Amount: amount.Amount * float64(s.Asset1Price())}
+		return types.AssetAmount{Asset: s.Asset2, Amount: amount.Amount * float64(s.Asset1Price())}
 	} else if amount.Asset == s.Asset2 {
-		return assets.AssetAmount{Asset: s.Asset1, Amount: amount.Amount * float64(s.Asset2Price())}
+		return types.AssetAmount{Asset: s.Asset1, Amount: amount.Amount * float64(s.Asset2Price())}
 	}
 
-	return assets.AssetAmount{}
+	return types.AssetAmount{}
 }
 
 //TODO: think about optional parameters
 //TODO: default slippage
 //TODO: check amountA and amountB if not nil so what
-func (s *Pool) FetchMintQuote(amountA assets.AssetAmount, amountB interface{}, slippage float64) (MintQuote, error) {
+func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, slippage float64) (MintQuote, error) {
 
 	var amount1, amount2 interface{}
 	var liquidityAssetAmount float64
@@ -509,15 +509,15 @@ func (s *Pool) FetchMintQuote(amountA assets.AssetAmount, amountB interface{}, s
 	if s.IssuedLiquidity > 0 {
 
 		if amount1 == nil {
-			amount1 = s.Convert(amount2.(assets.AssetAmount))
+			amount1 = s.Convert(amount2.(types.AssetAmount))
 		}
 
 		if amount2 == nil {
-			amount2 = s.Convert(amount1.(assets.AssetAmount))
+			amount2 = s.Convert(amount1.(types.AssetAmount))
 		}
 
-		amount1, _ := amount1.(assets.AssetAmount)
-		amount2, _ := amount2.(assets.AssetAmount)
+		amount1, _ := amount1.(types.AssetAmount)
+		amount2, _ := amount2.(types.AssetAmount)
 
 		a := amount1.Amount * float64(s.IssuedLiquidity) / float64(s.Asset1Reserves)
 		b := amount2.Amount * float64(s.IssuedLiquidity) / float64(s.Asset2Reserves)
@@ -534,8 +534,8 @@ func (s *Pool) FetchMintQuote(amountA assets.AssetAmount, amountB interface{}, s
 			return MintQuote{}, fmt.Errorf("amounts required for both assets for first mint")
 		}
 
-		amount1, _ := amount1.(assets.AssetAmount)
-		amount2, _ := amount2.(assets.AssetAmount)
+		amount1, _ := amount1.(types.AssetAmount)
+		amount2, _ := amount2.(types.AssetAmount)
 
 		liquidityAssetAmount = math.Sqrt(amount1.Amount*amount2.Amount) - 1000
 		slippage = 0
@@ -544,11 +544,11 @@ func (s *Pool) FetchMintQuote(amountA assets.AssetAmount, amountB interface{}, s
 
 	//TODO: maybe pointer
 	quote := MintQuote{
-		AmountsIn: map[assets.Asset]assets.AssetAmount{
-			s.Asset1: amount1.(assets.AssetAmount),
-			s.Asset2: amount2.(assets.AssetAmount),
+		AmountsIn: map[types.Asset]types.AssetAmount{
+			s.Asset1: amount1.(types.AssetAmount),
+			s.Asset2: amount2.(types.AssetAmount),
 		},
-		LiquidityAssetAmount: assets.AssetAmount{Asset: s.LiquidityAsset, Amount: liquidityAssetAmount},
+		LiquidityAssetAmount: types.AssetAmount{Asset: s.LiquidityAsset, Amount: liquidityAssetAmount},
 		Slippage:             slippage,
 	}
 
@@ -559,13 +559,13 @@ func (s *Pool) FetchMintQuote(amountA assets.AssetAmount, amountB interface{}, s
 //TODO: default value for slippage
 func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (BurnQuote, error) {
 
-	var LiquidityAssetIn assets.AssetAmount
+	var LiquidityAssetIn types.AssetAmount
 	switch v := liquidityAssetIn.(type) {
 
 	//TODO: maybe AssetAmount.Amount type is int
 	case uint64:
-		LiquidityAssetIn = assets.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
-	case assets.AssetAmount:
+		LiquidityAssetIn = types.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
+	case types.AssetAmount:
 		liquidityAssetIn = v
 	default:
 		return BurnQuote{}, fmt.Errorf("unsupported type for liquidityAssetIn")
@@ -579,7 +579,7 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (B
 
 	//TODO: maybe pointer
 	quote := BurnQuote{
-		AmountsOut: map[assets.Asset]*assets.AssetAmount{
+		AmountsOut: map[types.Asset]*types.AssetAmount{
 			s.Asset1: {Asset: s.Asset1, Amount: asset1Amount},
 			s.Asset2: {Asset: s.Asset2, Amount: asset2Amount},
 		},
@@ -589,9 +589,9 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (B
 
 }
 
-func (s *Pool) FetchFixedInputSwapQuote(amountIn assets.AssetAmount, slippage float64) (SwapQuote, error) {
+func (s *Pool) FetchFixedInputSwapQuote(amountIn types.AssetAmount, slippage float64) (SwapQuote, error) {
 
-	var assetOut assets.Asset
+	var assetOut types.Asset
 	var inputSupply, outputSupply uint64
 
 	assetIn := amountIn.Asset
@@ -618,14 +618,14 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn assets.AssetAmount, slippage fl
 	swapFees := assetInAmount - assetInAmountMinusFee
 	assetOutAmount := outputSupply - (k / (inputSupply + uint64(assetInAmountMinusFee)))
 
-	amountOut := assets.AssetAmount{Asset: assetOut, Amount: float64(assetOutAmount)}
+	amountOut := types.AssetAmount{Asset: assetOut, Amount: float64(assetOutAmount)}
 
 	//TODO: swap_fees is int but is set to AssetAmount in python code
 	quote := SwapQuote{
 		SwapType:  "fixed-input",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  assets.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
 		Slippage:  slippage,
 	}
 
@@ -633,9 +633,9 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn assets.AssetAmount, slippage fl
 
 }
 
-func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage float64) (SwapQuote, error) {
+func (s *Pool) FetchFixedOutputSwapQuote(amountOut types.AssetAmount, slippage float64) (SwapQuote, error) {
 
-	var assetIn assets.Asset
+	var assetIn types.Asset
 	var inputSupply, outputSupply uint64
 
 	assetOut := amountOut.Asset
@@ -658,14 +658,14 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage 
 	assetInAmount := calculatedAmountInWithoutFee * 1000 / 997
 	swapFees := assetInAmount - calculatedAmountInWithoutFee
 
-	amountIn := assets.AssetAmount{Asset: assetIn, Amount: float64(assetInAmount)}
+	amountIn := types.AssetAmount{Asset: assetIn, Amount: float64(assetInAmount)}
 
 	//TODO: swap_fees is int but is set to AssetAmount in python code
 	quote := SwapQuote{
 		SwapType:  "fixed-output",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  assets.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
 		Slippage:  slippage,
 	}
 
@@ -674,7 +674,7 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage 
 }
 
 //TODO: use address way of empty on others
-func (s *Pool) PrepareSwapTransactions(amountIn assets.AssetAmount, amountOut assets.AssetAmount, swapType string, swapperAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareSwapTransactions(amountIn types.AssetAmount, amountOut types.AssetAmount, swapType string, swapperAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if swapperAddress.IsZero() {
 		swapperAddress = s.Client.UserAddress
@@ -706,7 +706,7 @@ func (s *Pool) PrepareSwapTransactions(amountIn assets.AssetAmount, amountOut as
 
 }
 
-func (s *Pool) PrepareSwapTransactionsFromQuote(quote SwapQuote, swapperAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareSwapTransactionsFromQuote(quote SwapQuote, swapperAddress algoTypes.Address) (utils.TransactionGroup, error) {
 	amountIn, err := quote.AmountInWithSlippage()
 
 	if err != nil {
@@ -723,7 +723,7 @@ func (s *Pool) PrepareSwapTransactionsFromQuote(quote SwapQuote, swapperAddress 
 
 }
 
-func (s *Pool) PrepareBootstrapTransactions(poolerAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareBootstrapTransactions(poolerAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if poolerAddress.IsZero() {
 		poolerAddress = s.Client.UserAddress
@@ -751,7 +751,7 @@ func (s *Pool) PrepareBootstrapTransactions(poolerAddress types.Address) (utils.
 }
 
 //TODO: type dic[Asset] is dict[Asset,AssetAmount] in python code
-func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]assets.AssetAmount, liquidityAssetAmount assets.AssetAmount, poolerAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareMintTransactions(amountsIn map[types.Asset]types.AssetAmount, liquidityAssetAmount types.AssetAmount, poolerAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if poolerAddress.IsZero() {
 		poolerAddress = s.Client.UserAddress
@@ -783,7 +783,7 @@ func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]assets.AssetAm
 
 }
 
-func (s *Pool) PrepareMintTransactionsFromQuote(quote MintQuote, poolerAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareMintTransactionsFromQuote(quote MintQuote, poolerAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	liquidityAssetAmount, err := quote.LiquidityAssetAmountWithSlippage()
 	if err != nil {
@@ -793,14 +793,14 @@ func (s *Pool) PrepareMintTransactionsFromQuote(quote MintQuote, poolerAddress t
 	return s.PrepareMintTransactions(quote.AmountsIn, liquidityAssetAmount, poolerAddress)
 }
 
-func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount interface{}, amountsOut map[assets.Asset]assets.AssetAmount, poolerAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount interface{}, amountsOut map[types.Asset]types.AssetAmount, poolerAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
-	var LiquidityAssetAmount assets.AssetAmount
+	var LiquidityAssetAmount types.AssetAmount
 
 	switch v := liquidityAssetAmount.(type) {
 	case uint64:
-		LiquidityAssetAmount = assets.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
-	case assets.AssetAmount:
+		LiquidityAssetAmount = types.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
+	case types.AssetAmount:
 		LiquidityAssetAmount = v
 	default:
 		return utils.TransactionGroup{}, fmt.Errorf("unsupported type for liquidityAssetAmount")
@@ -837,7 +837,7 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount interface{}, amounts
 
 }
 
-func (s *Pool) PrepareBurnTransactionsFromQuote(quote BurnQuote, poolerAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareBurnTransactionsFromQuote(quote BurnQuote, poolerAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	amountsOut, err := quote.AmountsOutWithSlippage()
 
@@ -853,7 +853,7 @@ func (s *Pool) PrepareBurnTransactionsFromQuote(quote BurnQuote, poolerAddress t
 
 }
 
-func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareRedeemTransactions(amountOut types.AssetAmount, userAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.Client.UserAddress
@@ -883,7 +883,7 @@ func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddre
 
 }
 
-func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.Client.UserAddress
@@ -907,7 +907,7 @@ func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress types.Address)
 
 }
 
-func (s *Pool) PrepareRedeemFeesTransactions(amount uint64, creator types.Address, userAddress types.Address) (utils.TransactionGroup, error) {
+func (s *Pool) PrepareRedeemFeesTransactions(amount uint64, creator algoTypes.Address, userAddress algoTypes.Address) (utils.TransactionGroup, error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.Client.UserAddress
@@ -962,7 +962,7 @@ func (s *Pool) GetMinimumBalance() uint64 {
 	return total
 }
 
-func (s *Pool) FetchExcessAmounts(userAddress types.Address) (map[assets.Asset]assets.AssetAmount, error) {
+func (s *Pool) FetchExcessAmounts(userAddress algoTypes.Address) (map[types.Asset]types.AssetAmount, error) {
 	if userAddress.IsZero() {
 		userAddress = s.Client.UserAddress
 	}
@@ -980,12 +980,12 @@ func (s *Pool) FetchExcessAmounts(userAddress types.Address) (map[assets.Asset]a
 	if val, ok := excessAmounts[address.String()]; ok {
 		return val, nil
 	} else {
-		return map[assets.Asset]assets.AssetAmount{}, nil
+		return map[types.Asset]types.AssetAmount{}, nil
 	}
 
 }
 
-func (s *Pool) FetchPoolPosition(poolerAddress types.Address) (map[interface{}]interface{}, error) {
+func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (map[interface{}]interface{}, error) {
 
 	if poolerAddress.IsZero() {
 		poolerAddress = s.Client.UserAddress
