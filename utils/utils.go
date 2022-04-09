@@ -13,7 +13,6 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/crypto"
-	"github.com/algorand/go-algorand-sdk/logic"
 	"github.com/algorand/go-algorand-sdk/transaction"
 	"github.com/algorand/go-algorand-sdk/types"
 )
@@ -73,11 +72,11 @@ func GetProgram(definition myTypes.Definition, variables map[string]interface{})
 func EncodeValue(value interface{}, _type string) ([]byte, error) {
 
 	if _type == "int" {
-		value, ok := value.(int)
+		value, ok := value.(uint64)
 		if !ok {
 			return nil, fmt.Errorf("type assertion value to int failed")
 		}
-		return EncodeVarint(uint64(value)), nil
+		return EncodeVarint(value), nil
 	} else {
 		return nil, fmt.Errorf("unsupported value type %s", _type)
 	}
@@ -262,20 +261,7 @@ func NewTransactionGroup(transactions []types.Transaction) (TransactionGroup, er
 
 func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) error {
 
-	_, byteArrays, err := logic.ReadProgram(logicsig.Logic, nil)
-
-	if err != nil {
-		return err
-	}
-
-	//TODO: where is address in byteArray?
-	var address types.Address
-
-	n := copy(address[:], byteArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	address := crypto.AddressFromProgram(logicsig.Logic)
 
 	for i, txn := range s.Transactions {
 		if txn.Sender == address {

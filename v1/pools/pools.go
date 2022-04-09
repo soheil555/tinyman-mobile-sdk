@@ -2,7 +2,6 @@ package pools
 
 import (
 	"context"
-	"crypto/ed25519"
 	b64 "encoding/base64"
 	"fmt"
 	"math"
@@ -20,7 +19,7 @@ import (
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
-	"github.com/algorand/go-algorand-sdk/logic"
+	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
@@ -55,21 +54,7 @@ func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, as
 		return PoolInfo{}, err
 	}
 
-	//TODO: what is pool address
-	_, byteArrays, err := logic.ReadProgram(poolLogicsig.Logic, nil)
-
-	if err != nil {
-		return PoolInfo{}, err
-	}
-
-	//TODO: where is address in byteArray?
-	var poolAddress types.Address
-
-	n := copy(poolAddress[:], byteArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return PoolInfo{}, fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	accountInfo := client.AccountInformation(poolAddress.String())
 	return GetPoolInfoFromAccountInfo(accountInfo)
@@ -108,21 +93,7 @@ func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (PoolInfo
 		return poolInfo, err
 	}
 
-	//TODO: what is pool address
-	_, byteArrays, err := logic.ReadProgram(poolLogicsig.Logic, nil)
-
-	if err != nil {
-		return poolInfo, err
-	}
-
-	//TODO: where is address in byteArray?
-	var poolAddress types.Address
-
-	n := copy(poolAddress[:], byteArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return poolInfo, fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	if accountInfoResponse.Address != poolAddress.String() {
 		return poolInfo, fmt.Errorf("accountInfo address is not equal to poolAddress")
@@ -450,21 +421,7 @@ func (s *Pool) Address() (types.Address, error) {
 		return types.Address{}, err
 	}
 
-	//TODO: what is pool address
-	_, byteArrays, err := logic.ReadProgram(logicsig.Logic, nil)
-
-	if err != nil {
-		return types.Address{}, err
-	}
-
-	//TODO: where is address in byteArray?
-	var poolAddress types.Address
-
-	n := copy(poolAddress[:], byteArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return types.Address{}, fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	poolAddress := crypto.AddressFromProgram(logicsig.Logic)
 
 	return poolAddress, nil
 

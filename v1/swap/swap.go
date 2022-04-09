@@ -1,13 +1,11 @@
 package swap
 
 import (
-	"crypto/ed25519"
-	"fmt"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/contracts"
 
+	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/future"
-	"github.com/algorand/go-algorand-sdk/logic"
 	"github.com/algorand/go-algorand-sdk/types"
 )
 
@@ -19,21 +17,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		return utils.TransactionGroup{}, err
 	}
 
-	//TODO: what is pool address
-	_, byteArrays, err := logic.ReadProgram(poolLogicsig.Logic, nil)
-
-	if err != nil {
-		return utils.TransactionGroup{}, err
-	}
-
-	//TODO: where is address in byteArray?
-	var poolAddress types.Address
-
-	n := copy(poolAddress[:], byteArrays[1])
-
-	if n != ed25519.PublicKeySize {
-		return utils.TransactionGroup{}, fmt.Errorf("address generated from receiver bytes is the wrong size")
-	}
+	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	swapTypes := map[string]string{
 		"fixed-input":  "fi",
