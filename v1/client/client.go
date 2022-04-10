@@ -4,14 +4,12 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"encoding/binary"
-	"reflect"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/constants"
 	"tinyman-mobile-sdk/v1/optin"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
-	"github.com/algorand/go-algorand-sdk/client/v2/common"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
@@ -35,42 +33,11 @@ func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddr
 
 func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	//TODO: better way
-	//TODO: I think testnet client is changed
-	if reflect.DeepEqual(algodClient, algod.Client{}) {
-
-		headers := []*common.Header{
-			{Key: "User-Agent", Value: "algosdk"},
-		}
-
-		algodClient, err = algod.MakeClientWithHeaders("https://api.testnet.algoexplorer.io", "", headers)
-
-		if err != nil {
-			return
-		}
-
-	}
-
 	return NewTinymanClient(algodClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
 
 }
 
 func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
-
-	//TODO: better way
-	if reflect.DeepEqual(algodClient, algod.Client{}) {
-
-		headers := []*common.Header{
-			{Key: "User-Agent", Value: "algosdk"},
-		}
-
-		algodClient, err = algod.MakeClientWithHeaders("https://api.algoexplorer.io", "", headers)
-
-		if err != nil {
-			return
-		}
-
-	}
 
 	return NewTinymanClient(algodClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
 
