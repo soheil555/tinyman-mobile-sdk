@@ -286,7 +286,7 @@ type Pool struct {
 }
 
 //TODO: is validatorID true
-func NewPool(client client.TinymanClient, assetA interface{}, assetB interface{}, info interface{}, fetch bool, validatorAppID interface{}) (pool Pool, err error) {
+func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{}, info interface{}, fetch bool, validatorAppID interface{}) (pool Pool, err error) {
 
 	pool.Client = client
 
@@ -344,7 +344,7 @@ func NewPool(client client.TinymanClient, assetA interface{}, assetB interface{}
 
 }
 
-func NewPoolFromAccountInfo(accountInfo *algod.AccountInformation, client client.TinymanClient) (pool Pool, err error) {
+func MakePoolFromAccountInfo(accountInfo *algod.AccountInformation, client client.TinymanClient) (pool Pool, err error) {
 
 	info, err := GetPoolInfoFromAccountInfo(accountInfo)
 
@@ -352,7 +352,7 @@ func NewPoolFromAccountInfo(accountInfo *algod.AccountInformation, client client
 		return
 	}
 
-	pool, err = NewPool(client, info.Asset1ID, info.Asset2ID, info, false, info.ValidatorAppId)
+	pool, err = MakePool(client, info.Asset1ID, info.Asset2ID, info, false, info.ValidatorAppId)
 
 	//TODO: it is not required
 	if err != nil {

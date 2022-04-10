@@ -263,7 +263,7 @@ type TransactionGroup struct {
 	SignedTransactions [][]byte
 }
 
-func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup TransactionGroup, err error) {
+func MakeTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup TransactionGroup, err error) {
 
 	transactions, err = transaction.AssignGroupID(transactions, "")
 	if err != nil {

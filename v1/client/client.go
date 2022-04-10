@@ -21,7 +21,7 @@ type TinymanClient struct {
 	UserAddress    algoTypes.Address
 }
 
-func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
+func MakeTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
 
 	return TinymanClient{
 		algodClient,
@@ -31,15 +31,15 @@ func NewTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddr
 	}
 }
 
-func NewTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func MakeTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return NewTinymanClient(algodClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
+	return MakeTinymanClient(algodClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
 
 }
 
-func NewTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func MakeTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return NewTinymanClient(algodClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
+	return MakeTinymanClient(algodClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
 
 }
 

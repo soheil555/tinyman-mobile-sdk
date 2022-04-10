@@ -271,11 +271,11 @@ func TestSignAndSubmitTransactions(t *testing.T) {
 
 }
 
-func TestNewTransactionGroup(t *testing.T) {
+func TestMakeTransactionGroup(t *testing.T) {
 
 	transactions := mockTransactions()
 
-	txnGroup, err := NewTransactionGroup(transactions)
+	txnGroup, err := MakeTransactionGroup(transactions)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 2, len(txnGroup.Transactions))
