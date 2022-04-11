@@ -326,7 +326,10 @@ func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{
 	}
 
 	if fetch {
-		pool.Refresh()
+		err = pool.Refresh()
+		if err != nil {
+			return
+		}
 	} else if info != nil {
 
 		switch v := info.(type) {
@@ -368,15 +371,15 @@ func (s *Pool) RefreshWithInfo(info PoolInfo) {
 	s.UpdateFromInfo(info)
 }
 
-func (s *Pool) Refresh() {
+func (s *Pool) Refresh() (err error) {
 
 	info, err := GetPoolInfo(*s.Client.Algod, s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
 	//TODO:return error maybe
-	fmt.Printf("here error,%s\n", err)
 	if err != nil {
 		return
 	}
 	s.UpdateFromInfo(info)
+	return
 
 }
 
@@ -384,7 +387,6 @@ func (s *Pool) Refresh() {
 func (s *Pool) UpdateFromInfo(info PoolInfo) {
 
 	//TODO: this is wrong
-	fmt.Println("info.LiquidityAssetID is:", info.LiquidityAssetID)
 	if info.LiquidityAssetID != 0 {
 		s.Exists = true
 	}
@@ -508,7 +510,10 @@ func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, sl
 		amount2 = amountB
 	}
 
-	s.Refresh()
+	err = s.Refresh()
+	if err != nil {
+		return
+	}
 
 	if !s.Exists {
 		err = fmt.Errorf("pool has not been bootstrapped yet")
@@ -585,7 +590,10 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (q
 
 	}
 
-	s.Refresh()
+	err = s.Refresh()
+	if err != nil {
+		return
+	}
 
 	asset1Amount := (LiquidityAssetIn.Amount * float64(s.Asset1Reserves)) / float64(s.IssuedLiquidity)
 	asset2Amount := (LiquidityAssetIn.Amount * float64(s.Asset2Reserves)) / float64(s.IssuedLiquidity)
@@ -610,7 +618,11 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn types.AssetAmount, slippage flo
 
 	assetIn := amountIn.Asset
 	assetInAmount := amountIn.Amount
-	s.Refresh()
+
+	err = s.Refresh()
+	if err != nil {
+		return
+	}
 
 	if assetIn == s.Asset1 {
 		assetOut = s.Asset2
@@ -655,7 +667,11 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut types.AssetAmount, slippage f
 
 	assetOut := amountOut.Asset
 	assetOutAmount := amountOut.Amount
-	s.Refresh()
+
+	err = s.Refresh()
+	if err != nil {
+		return
+	}
 
 	if assetOut == s.Asset1 {
 		assetIn = s.Asset2
