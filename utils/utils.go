@@ -20,7 +20,7 @@ import (
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition types.LogicDefinition, variables map[string]interface{}) (templateBytes []byte, err error) {
+func GetProgram(definition types.Logic, variables map[string]interface{}) (templateBytes []byte, err error) {
 
 	template := definition.Bytecode
 

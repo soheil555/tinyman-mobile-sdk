@@ -1,8 +1,8 @@
 package contracts
 
 import (
+	"embed"
 	"encoding/json"
-	"os"
 	"sort"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
@@ -11,9 +11,14 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func readContractsFile(fileName string) (data types.ASC, err error) {
+//TODO: is embedding ok
 
-	file, err := os.ReadFile(fileName)
+//go:embed asc.json
+var f embed.FS
+
+func readContractsFile() (data types.ASC, err error) {
+
+	file, err := f.ReadFile("asc.json")
 
 	if err != nil {
 		return
@@ -27,7 +32,7 @@ func readContractsFile(fileName string) (data types.ASC, err error) {
 
 func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (lsig algoTypes.LogicSig, err error) {
 
-	contracts, err := readContractsFile("../asc.json")
+	contracts, err := readContractsFile()
 
 	if err != nil {
 		return

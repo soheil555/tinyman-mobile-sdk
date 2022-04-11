@@ -372,6 +372,7 @@ func (s *Pool) Refresh() {
 
 	info, err := GetPoolInfo(*s.Client.Algod, s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
 	//TODO:return error maybe
+	fmt.Printf("here error,%s\n", err)
 	if err != nil {
 		return
 	}
@@ -383,6 +384,7 @@ func (s *Pool) Refresh() {
 func (s *Pool) UpdateFromInfo(info PoolInfo) {
 
 	//TODO: this is wrong
+	fmt.Println("info.LiquidityAssetID is:", info.LiquidityAssetID)
 	if info.LiquidityAssetID != 0 {
 		s.Exists = true
 	}
