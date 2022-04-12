@@ -17,8 +17,8 @@ import (
 	"tinyman-mobile-sdk/v1/redeem"
 	"tinyman-mobile-sdk/v1/swap"
 
-	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
+	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 	"github.com/algorand/go-algorand-sdk/crypto"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
@@ -47,7 +47,7 @@ type PoolInfo struct {
 	LastRefreshedRound              uint64
 }
 
-func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, asset2ID uint64) (poolInfo PoolInfo, err error) {
+func GetPoolInfo(indexer *indexer.Client, validatorAppID uint64, asset1ID uint64, asset2ID uint64) (poolInfo PoolInfo, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppID, asset1ID, asset2ID)
 	if err != nil {
@@ -56,16 +56,16 @@ func GetPoolInfo(client algod.Client, validatorAppID uint64, asset1ID uint64, as
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	accountInfo := client.AccountInformation(poolAddress.String())
+	accountInfo := indexer.LookupAccountByID(poolAddress.String())
 	return GetPoolInfoFromAccountInfo(accountInfo)
 
 }
 
-func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (poolInfo PoolInfo, err error) {
+func GetPoolInfoFromAccountInfo(accountInfo *indexer.LookupAccountByID) (poolInfo PoolInfo, err error) {
 
 	//TODO: more on make()
 
-	accountInfoResponse, err := accountInfo.Do(context.Background())
+	_, accountInfoResponse, err := accountInfo.Do(context.Background())
 	if err != nil {
 		return
 	}
@@ -109,20 +109,23 @@ func GetPoolInfoFromAccountInfo(accountInfo *algod.AccountInformation) (poolInfo
 
 	key1 := []byte("o")
 	key1 = append(key1, utils.IntToBytes(asset1ID)...)
+	encodedKey1 := make([]byte, b64.StdEncoding.EncodedLen(len(key1)))
 
-	b64.StdEncoding.Encode(key1, key1)
+	b64.StdEncoding.Encode(encodedKey1, key1)
 
-	outstandingAsset1Amount := utils.GetStateInt(validatorAppState, key1)
+	outstandingAsset1Amount := utils.GetStateInt(validatorAppState, encodedKey1)
 
 	key2 := []byte("o")
 	key2 = append(key2, utils.IntToBytes(asset2ID)...)
+	encodedKey2 := make([]byte, b64.StdEncoding.EncodedLen(len(key2)))
 
-	outstandingAsset2Amount := utils.GetStateInt(validatorAppState, key2)
+	outstandingAsset2Amount := utils.GetStateInt(validatorAppState, encodedKey2)
 
 	key3 := []byte("o")
 	key3 = append(key3, utils.IntToBytes(liquidityAssetID)...)
+	encodedKey3 := make([]byte, b64.StdEncoding.EncodedLen(len(key3)))
 
-	outstandingLiquidityAssetAmount := utils.GetStateInt(validatorAppState, key3)
+	outstandingLiquidityAssetAmount := utils.GetStateInt(validatorAppState, encodedKey3)
 
 	poolInfo = PoolInfo{
 		Address:                         poolAddress,
@@ -347,7 +350,7 @@ func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{
 
 }
 
-func MakePoolFromAccountInfo(accountInfo *algod.AccountInformation, client client.TinymanClient) (pool Pool, err error) {
+func MakePoolFromAccountInfo(accountInfo *indexer.LookupAccountByID, client client.TinymanClient) (pool Pool, err error) {
 
 	info, err := GetPoolInfoFromAccountInfo(accountInfo)
 
@@ -373,12 +376,14 @@ func (s *Pool) RefreshWithInfo(info PoolInfo) {
 
 func (s *Pool) Refresh() (err error) {
 
-	info, err := GetPoolInfo(*s.Client.Algod, s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
+	info, err := GetPoolInfo(s.Client.Indexer, s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
 	//TODO:return error maybe
 	if err != nil {
 		return
 	}
+
 	s.UpdateFromInfo(info)
+
 	return
 
 }
@@ -499,13 +504,13 @@ func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, sl
 	var liquidityAssetAmount float64
 
 	if amountA.Asset == s.Asset1 {
-		amount1 = amountA.Asset
+		amount1 = amountA
 	} else {
 		amount1 = amountB
 	}
 
 	if amountA.Asset == s.Asset2 {
-		amount2 = amountA.Asset
+		amount2 = amountA
 	} else {
 		amount2 = amountB
 	}

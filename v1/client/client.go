@@ -11,35 +11,38 @@ import (
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
+	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 type TinymanClient struct {
 	Algod          *algod.Client
+	Indexer        *indexer.Client
 	ValidatorAppId uint64
 	AssetsCache    map[uint64]types.Asset
 	UserAddress    algoTypes.Address
 }
 
-func MakeTinymanClient(algodClient *algod.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
+func MakeTinymanClient(algodClient *algod.Client, indexerClient *indexer.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
 
 	return TinymanClient{
 		algodClient,
+		indexerClient,
 		validatorAppId,
 		map[uint64]types.Asset{},
 		userAddress,
 	}
 }
 
-func MakeTinymanTestnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func MakeTinymanTestnetClient(algodClient *algod.Client, indexerClient *indexer.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return MakeTinymanClient(algodClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
+	return MakeTinymanClient(algodClient, indexerClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
 
 }
 
-func MakeTinymanMainnetClient(algodClient *algod.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func MakeTinymanMainnetClient(algodClient *algod.Client, indexerClient *indexer.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return MakeTinymanClient(algodClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
+	return MakeTinymanClient(algodClient, indexerClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
 
 }
 
