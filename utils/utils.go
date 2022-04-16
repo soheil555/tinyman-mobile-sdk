@@ -44,7 +44,6 @@ func GetProgram(definition types.Logic, variables map[string]interface{}) (templ
 		start := v.Index - offset
 		end := start + v.Length
 
-		//TODO: better way maybe
 		var valueEncoded []byte
 		valueEncoded, err = EncodeValue(value, v.Type)
 
@@ -56,7 +55,6 @@ func GetProgram(definition types.Logic, variables map[string]interface{}) (templ
 		diff := v.Length - valueEncodedLen
 		offset += diff
 
-		//TODO: better way for assign?
 		var tmp []byte
 		tmp = append(tmp, templateBytes[:start]...)
 		tmp = append(tmp, valueEncoded...)
@@ -76,15 +74,17 @@ func EncodeValue(value interface{}, _type string) (buf []byte, err error) {
 
 		var uintValue uint64
 
-		//TODO: better way maybe
 		switch v := value.(type) {
 
 		case int:
+			if v < 0 {
+				err = fmt.Errorf("value must be greater than or equal to 0")
+				return
+			}
 			uintValue = uint64(v)
-		case uint64:
-			uintValue = v
 		default:
-			return nil, fmt.Errorf("only int or uint64 type is valid for value")
+			err = fmt.Errorf("only int type is valid for value")
+			return
 
 		}
 
@@ -159,7 +159,7 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Tr
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
-func WaitForConfirmation(client *algod.Client, txid string) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
@@ -171,26 +171,25 @@ func WaitForConfirmation(client *algod.Client, txid string) (pendingTrxInfo mode
 
 	txinfo := client.PendingTransactionInformation(txid)
 
-	pendingTrxInfo, _, err = txinfo.Do(context.Background())
+	trxInfo, _, err = txinfo.Do(context.Background())
 
 	if err != nil {
 		err = fmt.Errorf("error getting algod pending transaction info: %s", err)
 		return
 	}
 
-	//TODO: is it correct?
-	for !(pendingTrxInfo.ConfirmedRound > 0) {
+	for !(trxInfo.ConfirmedRound > 0) {
 
 		fmt.Println("Waiting for confirmation")
 		lastRound += 1
-		//TODO: do nothing with response?
+
 		_, err = client.StatusAfterBlock(lastRound).Do(context.Background())
 		if err != nil {
-			err = fmt.Errorf("error getting algod pending transaction info: %s", err)
+			err = fmt.Errorf("error getting status after block: %s", err)
 			return
 		}
 
-		pendingTrxInfo, _, err = txinfo.Do(context.Background())
+		trxInfo, _, err = txinfo.Do(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("error getting algod pending transaction info: %s", err)
@@ -199,9 +198,8 @@ func WaitForConfirmation(client *algod.Client, txid string) (pendingTrxInfo mode
 
 	}
 
-	//TODO: is it good way to return txid
-	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
-	return pendingTrxInfo, txid, nil
+	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, trxInfo.ConfirmedRound)
+	return trxInfo, txid, nil
 
 }
 
@@ -222,7 +220,6 @@ func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
 	case []byte:
 		keyString = string(k[:])
 	default:
-		//TODO: maybe return error
 		keyString = ""
 
 	}
@@ -245,7 +242,6 @@ func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 	case []byte:
 		keyString = string(k[:])
 	default:
-		//TODO: maybe return error
 		keyString = ""
 
 	}
@@ -257,7 +253,6 @@ func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 
 }
 
-//TODO: should move to another file?
 type TransactionGroup struct {
 	Transactions       []algoTypes.Transaction
 	SignedTransactions [][]byte
@@ -269,7 +264,7 @@ func MakeTransactionGroup(transactions []algoTypes.Transaction) (transactionGrou
 	if err != nil {
 		return TransactionGroup{}, err
 	}
-	//TODO: [][]byte. is it good?
+
 	signedTransactions := make([][]byte, len(transactions))
 	return TransactionGroup{transactions, signedTransactions}, nil
 
@@ -293,7 +288,7 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig algoTypes.LogicSig) (err er
 			_, stxBytes, err := crypto.SignLogicsigTransaction(logicsig, txn)
 
 			if err != nil {
-				return fmt.Errorf("failed to create transaction: %v", err)
+				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
 
 			s.SignedTransactions[i] = stxBytes
@@ -320,7 +315,7 @@ func (s *TransactionGroup) SignWithPrivateKey(address algoTypes.Address, private
 
 }
 
-func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
 	var signedGroup []byte
 
