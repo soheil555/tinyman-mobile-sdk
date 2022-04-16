@@ -235,11 +235,6 @@ type MintQuote struct {
 func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount types.AssetAmount, err error) {
 	assetAmount, err = s.LiquidityAssetAmount.Sub(s.LiquidityAssetAmount.Mul(s.Slippage))
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 }
 
@@ -360,11 +355,6 @@ func MakePoolFromAccountInfo(accountInfo *indexer.LookupAccountByID, client clie
 
 	pool, err = MakePool(client, info.Asset1ID, info.Asset2ID, info, false, info.ValidatorAppId)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -419,11 +409,6 @@ func (s *Pool) UpdateFromInfo(info PoolInfo) {
 func (s *Pool) GetLogicsig() (poolLogicsig algoTypes.LogicSig, err error) {
 
 	poolLogicsig, err = contracts.GetPoolLogicsig(s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
-
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 
@@ -735,11 +720,6 @@ func (s *Pool) PrepareSwapTransactions(amountIn types.AssetAmount, amountOut typ
 		suggestedParams,
 	)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -780,11 +760,6 @@ func (s *Pool) PrepareBootstrapTransactions(poolerAddress algoTypes.Address) (tx
 		poolerAddress,
 		suggestedParams)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -808,17 +783,12 @@ func (s *Pool) PrepareMintTransactions(amountsIn map[types.Asset]types.AssetAmou
 		s.Asset1.Id,
 		s.Asset2.Id,
 		s.LiquidityAsset.Id,
-		uint64(asset1Amount.Amount),
-		uint64(asset2Amount.Amount),
-		uint64(liquidityAssetAmount.Amount),
+		asset1Amount.Amount,
+		asset2Amount.Amount,
+		liquidityAssetAmount.Amount,
 		poolerAddress,
 		suggestedParams,
 	)
-
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 
@@ -871,11 +841,6 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount interface{}, amounts
 		suggestedParams,
 	)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -918,11 +883,6 @@ func (s *Pool) PrepareRedeemTransactions(amountOut types.AssetAmount, userAddres
 		suggestedParams,
 	)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -943,11 +903,6 @@ func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress algoTypes.Addr
 		userAddress,
 		suggestedParams,
 	)
-
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 
@@ -974,11 +929,6 @@ func (s *Pool) PrepareRedeemFeesTransactions(amount uint64, creator algoTypes.Ad
 		userAddress,
 		suggestedParams,
 	)
-
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 }

@@ -19,11 +19,6 @@ func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address
 
 	txnGroup, err = utils.MakeTransactionGroup(transactions)
 
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
-
 	return
 
 }
@@ -39,11 +34,6 @@ func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, sug
 	transactions := []algoTypes.Transaction{txn}
 
 	txnGroup, err = utils.MakeTransactionGroup(transactions)
-
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 

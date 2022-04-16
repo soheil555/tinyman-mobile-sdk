@@ -72,10 +72,6 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
-	//TODO: it is not required
-	if err != nil {
-		return
-	}
 
 	return
 

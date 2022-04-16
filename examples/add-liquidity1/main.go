@@ -8,7 +8,6 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common"
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
-	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
 	"github.com/algorand/go-algorand-sdk/types"
 	"github.com/kr/pretty"
@@ -85,9 +84,6 @@ func main() {
 
 	// Check if we are happy with the quote...
 	//TODO: in python code quote.AmountsIn[ALGO] considered to be number
-
-	fmt.Println("quote.AmountsIn[ALGO].Amount:", quote.AmountsIn[ALGO].Amount)
-
 	if quote.AmountsIn[ALGO].Amount < 7_000_000 {
 
 		// Prepare the mint transactions from the quote and sign them
