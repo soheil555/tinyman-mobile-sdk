@@ -203,11 +203,11 @@ func (s *SwapQuote) AmountInWithSlippage() (assetAmount types.AssetAmount, err e
 
 }
 
-func (s *SwapQuote) Price() float64 {
+func (s *SwapQuote) Price() uint64 {
 	return s.AmountOut.Amount / s.AmountIn.Amount
 }
 
-func (s *SwapQuote) PriceWithSlippage() (float64, error) {
+func (s *SwapQuote) PriceWithSlippage() (uint64, error) {
 
 	amountOutWithSlippage, err := s.AmountOutWithSlippage()
 
@@ -444,12 +444,13 @@ func (s *Pool) Address() (poolAddress algoTypes.Address, err error) {
 }
 
 //TODO: should return result be float64
-func (s *Pool) Asset1Price() uint64 {
-	return s.Asset2Reserves / s.Asset1Reserves
+func (s *Pool) Asset1Price() float64 {
+
+	return float64(s.Asset2Reserves) / float64(s.Asset1Reserves)
 }
 
-func (s *Pool) Asset2Price() uint64 {
-	return s.Asset1Reserves / s.Asset2Reserves
+func (s *Pool) Asset2Price() float64 {
+	return float64(s.Asset1Reserves) / float64(s.Asset2Reserves)
 }
 
 func (s *Pool) Info() (poolInfo PoolInfo, err error) {
@@ -487,9 +488,9 @@ func (s *Pool) Convert(amount types.AssetAmount) (assetAmount types.AssetAmount)
 	//TODO: maybe shorter way
 	if amount.Asset == s.Asset1 {
 		//TODO:maybe convert to int
-		return types.AssetAmount{Asset: s.Asset2, Amount: amount.Amount * float64(s.Asset1Price())}
+		return types.AssetAmount{Asset: s.Asset2, Amount: uint64(float64(amount.Amount) * s.Asset1Price())}
 	} else if amount.Asset == s.Asset2 {
-		return types.AssetAmount{Asset: s.Asset1, Amount: amount.Amount * float64(s.Asset2Price())}
+		return types.AssetAmount{Asset: s.Asset1, Amount: uint64(float64(amount.Amount) * s.Asset2Price())}
 	}
 
 	return
@@ -501,7 +502,7 @@ func (s *Pool) Convert(amount types.AssetAmount) (assetAmount types.AssetAmount)
 func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, slippage float64) (quote MintQuote, err error) {
 
 	var amount1, amount2 interface{}
-	var liquidityAssetAmount float64
+	var liquidityAssetAmount uint64
 
 	if amountA.Asset == s.Asset1 {
 		amount1 = amountA
@@ -540,8 +541,8 @@ func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, sl
 		amount1, _ := amount1.(types.AssetAmount)
 		amount2, _ := amount2.(types.AssetAmount)
 
-		a := amount1.Amount * float64(s.IssuedLiquidity) / float64(s.Asset1Reserves)
-		b := amount2.Amount * float64(s.IssuedLiquidity) / float64(s.Asset2Reserves)
+		a := amount1.Amount * s.IssuedLiquidity / s.Asset1Reserves
+		b := amount2.Amount * s.IssuedLiquidity / s.Asset2Reserves
 
 		if a < b {
 			liquidityAssetAmount = a
@@ -559,7 +560,7 @@ func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB interface{}, sl
 		amount1, _ := amount1.(types.AssetAmount)
 		amount2, _ := amount2.(types.AssetAmount)
 
-		liquidityAssetAmount = math.Sqrt(amount1.Amount*amount2.Amount) - 1000
+		liquidityAssetAmount = uint64(math.Sqrt(float64(amount1.Amount*amount2.Amount)) - 1000)
 		slippage = 0
 
 	}
@@ -586,7 +587,7 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (q
 
 	//TODO: maybe AssetAmount.Amount type is int
 	case uint64:
-		LiquidityAssetIn = types.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
+		LiquidityAssetIn = types.AssetAmount{Asset: s.LiquidityAsset, Amount: v}
 	case types.AssetAmount:
 		liquidityAssetIn = v
 	default:
@@ -600,8 +601,8 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn interface{}, slippage float64) (q
 		return
 	}
 
-	asset1Amount := (LiquidityAssetIn.Amount * float64(s.Asset1Reserves)) / float64(s.IssuedLiquidity)
-	asset2Amount := (LiquidityAssetIn.Amount * float64(s.Asset2Reserves)) / float64(s.IssuedLiquidity)
+	asset1Amount := (LiquidityAssetIn.Amount * s.Asset1Reserves) / s.IssuedLiquidity
+	asset2Amount := (LiquidityAssetIn.Amount * s.Asset2Reserves) / s.IssuedLiquidity
 
 	//TODO: maybe pointer
 	quote = BurnQuote{
@@ -649,14 +650,14 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn types.AssetAmount, slippage flo
 	swapFees := assetInAmount - assetInAmountMinusFee
 	assetOutAmount := outputSupply - (k / (inputSupply + uint64(assetInAmountMinusFee)))
 
-	amountOut := types.AssetAmount{Asset: assetOut, Amount: float64(assetOutAmount)}
+	amountOut := types.AssetAmount{Asset: assetOut, Amount: assetOutAmount}
 
 	//TODO: swap_fees is int but is set to AssetAmount in python code
 	quote = SwapQuote{
 		SwapType:  "fixed-input",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: swapFees},
 		Slippage:  slippage,
 	}
 
@@ -694,14 +695,14 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut types.AssetAmount, slippage f
 	assetInAmount := calculatedAmountInWithoutFee * 1000 / 997
 	swapFees := assetInAmount - calculatedAmountInWithoutFee
 
-	amountIn := types.AssetAmount{Asset: assetIn, Amount: float64(assetInAmount)}
+	amountIn := types.AssetAmount{Asset: assetIn, Amount: assetInAmount}
 
 	//TODO: swap_fees is int but is set to AssetAmount in python code
 	quote = SwapQuote{
 		SwapType:  "fixed-output",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: float64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: swapFees},
 		Slippage:  slippage,
 	}
 
@@ -839,7 +840,7 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount interface{}, amounts
 
 	switch v := liquidityAssetAmount.(type) {
 	case uint64:
-		LiquidityAssetAmount = types.AssetAmount{Asset: s.LiquidityAsset, Amount: float64(v)}
+		LiquidityAssetAmount = types.AssetAmount{Asset: s.LiquidityAsset, Amount: v}
 	case types.AssetAmount:
 		LiquidityAssetAmount = v
 	default:
@@ -1038,7 +1039,7 @@ func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (map[interface
 		poolerAddress = s.Client.UserAddress
 	}
 
-	accountInfo, err := s.Client.Algod.AccountInformation(poolerAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.Client.Indexer.LookupAccountByID(poolerAddress.String()).Do(context.Background())
 	if err != nil {
 		return nil, err
 	}

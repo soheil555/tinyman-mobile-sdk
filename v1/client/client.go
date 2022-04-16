@@ -195,7 +195,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
 			asset := s.FetchAsset(assetID)
-			pools[poolAddress][asset] = types.AssetAmount{Asset: asset, Amount: float64(value)}
+			pools[poolAddress][asset] = types.AssetAmount{Asset: asset, Amount: value}
 
 		}
 
