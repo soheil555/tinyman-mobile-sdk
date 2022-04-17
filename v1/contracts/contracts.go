@@ -47,7 +47,7 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (l
 	assetID1 := assets[1]
 	assetID2 := assets[0]
 
-	variables := map[string]interface{}{
+	variables := map[string]uint64{
 		"validator_app_id": validatorAppID,
 		"asset_id_1":       assetID1,
 		"asset_id_2":       assetID2,

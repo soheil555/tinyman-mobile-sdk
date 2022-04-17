@@ -68,7 +68,7 @@ func TestGetProgram(t *testing.T) {
 		},
 	}
 
-	variables := map[string]interface{}{
+	variables := map[string]uint64{
 		"validator_app_id": 10,
 		"asset_id_1":       2,
 		"asset_id_2":       1,
@@ -95,14 +95,10 @@ func TestEncodeVarint(t *testing.T) {
 
 func TestEncodeValue(t *testing.T) {
 
-	var input interface{} = 111111
-	wrongInput := "wrong"
+	var input uint64 = 111111
 	expected := []byte{135, 228, 6}
 
 	_, err := EncodeValue(input, "string")
-	assert.NotNil(t, err)
-
-	_, err = EncodeValue(wrongInput, "int")
 	assert.NotNil(t, err)
 
 	result, err := EncodeValue(input, "int")

@@ -20,7 +20,7 @@ import (
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition types.Logic, variables map[string]interface{}) (templateBytes []byte, err error) {
+func GetProgram(definition types.Logic, variables map[string]uint64) (templateBytes []byte, err error) {
 
 	template := definition.Bytecode
 
@@ -68,35 +68,18 @@ func GetProgram(definition types.Logic, variables map[string]interface{}) (templ
 
 }
 
-func EncodeValue(value interface{}, _type string) (buf []byte, err error) {
+//TODO: does checking _type is required
+func EncodeValue(value uint64, _type string) (buf []byte, err error) {
 
 	if _type == "int" {
 
-		var uintValue uint64
-
-		switch v := value.(type) {
-
-		case int:
-			if v < 0 {
-				err = fmt.Errorf("value must be greater than or equal to 0")
-				return
-			}
-			uintValue = uint64(v)
-		default:
-			err = fmt.Errorf("only int type is valid for value")
-			return
-
-		}
-
-		buf = EncodeVarint(uintValue)
-		return
-
-	} else {
-
-		err = fmt.Errorf("unsupported value type %s", _type)
+		buf = EncodeVarint(value)
 		return
 
 	}
+
+	err = fmt.Errorf("unsupported value type %s", _type)
+	return
 
 }
 
