@@ -5,6 +5,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"math"
+	"reflect"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/bootstrap"
@@ -23,8 +24,6 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-//TODO: move to another file
-//TODO: Address type
 //TODO: round vs lastRefreshedRound
 type PoolInfo struct {
 	Address                         algoTypes.Address
@@ -56,33 +55,29 @@ func GetPoolInfo(indexer *indexer.Client, validatorAppID uint64, asset1ID uint64
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	accountInfo := indexer.LookupAccountByID(poolAddress.String())
-	return GetPoolInfoFromAccountInfo(accountInfo)
-
-}
-
-func GetPoolInfoFromAccountInfo(accountInfo *indexer.LookupAccountByID) (poolInfo PoolInfo, err error) {
-
-	//TODO: more on make()
-
-	_, accountInfoResponse, err := accountInfo.Do(context.Background())
+	_, accountInfo, err := indexer.LookupAccountByID(poolAddress.String()).Do(context.Background())
 	if err != nil {
 		return
 	}
 
-	if len(accountInfoResponse.AppsLocalState) == 0 {
+	return GetPoolInfoFromAccountInfo(accountInfo)
+
+}
+
+func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo PoolInfo, err error) {
+
+	if len(accountInfo.AppsLocalState) == 0 {
 		return
 	}
 
-	validatorAppID := accountInfoResponse.AppsLocalState[0].Id
+	validatorAppID := accountInfo.AppsLocalState[0].Id
 
 	validatorAppState := make(map[string]models.TealValue)
 
-	for _, x := range accountInfoResponse.AppsLocalState[0].KeyValue {
+	for _, x := range accountInfo.AppsLocalState[0].KeyValue {
 		validatorAppState[x.Key] = x.Value
 	}
 
-	//TODO: fix GetStateInt
 	asset1ID := utils.GetStateInt(validatorAppState, "a1")
 	asset2ID := utils.GetStateInt(validatorAppState, "a2")
 
@@ -94,7 +89,7 @@ func GetPoolInfoFromAccountInfo(accountInfo *indexer.LookupAccountByID) (poolInf
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	if accountInfoResponse.Address != poolAddress.String() {
+	if accountInfo.Address != poolAddress.String() {
 		err = fmt.Errorf("accountInfo address is not equal to poolAddress")
 		return
 	}
@@ -104,7 +99,7 @@ func GetPoolInfoFromAccountInfo(accountInfo *indexer.LookupAccountByID) (poolInf
 	issuedLiquidity := utils.GetStateInt(validatorAppState, "ilt")
 	unclaimedProtocolFees := utils.GetStateInt(validatorAppState, "p")
 
-	liquidityAsset := accountInfoResponse.CreatedAssets[0]
+	liquidityAsset := accountInfo.CreatedAssets[0]
 	liquidityAssetID := liquidityAsset.Index
 
 	key1 := []byte("o")
@@ -141,24 +136,22 @@ func GetPoolInfoFromAccountInfo(accountInfo *indexer.LookupAccountByID) (poolInf
 		OutstandingAsset2Amount:         outstandingAsset2Amount,
 		OutstandingLiquidityAssetAmount: outstandingLiquidityAssetAmount,
 		ValidatorAppId:                  validatorAppID,
-		AlgoBalance:                     accountInfoResponse.Amount,
-		Round:                           accountInfoResponse.Round,
+		AlgoBalance:                     accountInfo.Amount,
+		Round:                           accountInfo.Round,
 	}
 
 	return
 
 }
 
-//TODO: maybe all addresses must be string
 func GetExcessAssetKey(poolAddress string, assetID uint64) (key []byte, err error) {
 	a, err := algoTypes.DecodeAddress(poolAddress)
 	if err != nil {
 		return
 	}
-	//TODO: append in one move
-	e := []byte("e")
+
 	key = append(key, a[:]...)
-	key = append(key, e...)
+	key = append(key, byte('e'))
 	key = append(key, utils.IntToBytes(assetID)...)
 
 	return
@@ -179,15 +172,11 @@ func (s *SwapQuote) AmountOutWithSlippage() (assetAmount types.AssetAmount, err 
 	}
 
 	assetAmount, err = s.AmountOut.Sub(s.AmountOut.Mul(s.Slippage))
-	if err != nil {
-		return
-	}
 
 	return
 
 }
 
-//TODO: pointer or not pointer ?
 func (s *SwapQuote) AmountInWithSlippage() (assetAmount types.AssetAmount, err error) {
 
 	if s.SwapType == "fixed-input" {
@@ -195,43 +184,43 @@ func (s *SwapQuote) AmountInWithSlippage() (assetAmount types.AssetAmount, err e
 	}
 
 	assetAmount, err = s.AmountIn.Add(s.AmountIn.Mul(s.Slippage))
-	if err != nil {
-		return
-	}
 
 	return
 
 }
 
-func (s *SwapQuote) Price() uint64 {
-	return s.AmountOut.Amount / s.AmountIn.Amount
+func (s *SwapQuote) Price() float64 {
+	return float64(s.AmountOut.Amount) / float64(s.AmountIn.Amount)
 }
 
-func (s *SwapQuote) PriceWithSlippage() (uint64, error) {
+func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
 
 	amountOutWithSlippage, err := s.AmountOutWithSlippage()
 
 	if err != nil {
-		return 0, err
+		return
 	}
 
 	amountInWithSlippage, err := s.AmountInWithSlippage()
 
 	if err != nil {
-		return 0, err
+		return
 	}
 
-	return amountOutWithSlippage.Amount / amountInWithSlippage.Amount, nil
+	priceWithSlippage = float64(amountOutWithSlippage.Amount) / float64(amountInWithSlippage.Amount)
+
+	return
 
 }
 
+//TODO: in python code AmountsIn is dict[AssetAmount]
 type MintQuote struct {
 	AmountsIn            map[types.Asset]types.AssetAmount
 	LiquidityAssetAmount types.AssetAmount
 	Slippage             float64
 }
 
-//TODO: in python code it return int?
+//TODO: in python code it return int
 func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount types.AssetAmount, err error) {
 	assetAmount, err = s.LiquidityAssetAmount.Sub(s.LiquidityAssetAmount.Mul(s.Slippage))
 
@@ -262,8 +251,6 @@ func (s *BurnQuote) AmountsOutWithSlippage() (out map[types.Asset]types.AssetAmo
 	return
 }
 
-//TODO: is PoolInfo and Pool the same
-//TODO: where is address
 type Pool struct {
 	Client                          client.TinymanClient
 	ValidatorAppID                  uint64
@@ -283,28 +270,25 @@ type Pool struct {
 	MinBalance                      uint64
 }
 
-//TODO: is validatorID true
-func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{}, info interface{}, fetch bool, validatorAppID interface{}) (pool Pool, err error) {
+//TODO: is validatorID == 0 a valid ID
+//TODO: assetA and assetB could be either int or Asset
+func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{}, info PoolInfo, fetch bool, validatorAppID uint64) (pool Pool, err error) {
 
+	var asset1, asset2 types.Asset
 	pool.Client = client
 
-	if validatorAppID == nil {
+	if validatorAppID == 0 {
 		pool.ValidatorAppID = client.ValidatorAppId
 	} else {
-		validatorAppIDUint, ok := validatorAppID.(uint64)
-		if !ok {
-			err = fmt.Errorf("unsupported type for validatorAppID")
-			return
-		}
-		pool.ValidatorAppID = validatorAppIDUint
+		pool.ValidatorAppID = validatorAppID
 	}
 
 	switch v := assetA.(type) {
 
-	case uint64:
-		pool.Asset1 = client.FetchAsset(v)
+	case int:
+		asset1 = client.FetchAsset(uint64(v))
 	case types.Asset:
-		pool.Asset1 = v
+		asset1 = v
 	default:
 		err = fmt.Errorf("unsupported type for assetA")
 		return
@@ -313,31 +297,38 @@ func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{
 
 	switch v := assetB.(type) {
 
-	case uint64:
-		pool.Asset2 = client.FetchAsset(v)
+	case int:
+		asset2 = client.FetchAsset(uint64(v))
 	case types.Asset:
-		pool.Asset2 = v
+		asset2 = v
 	default:
 		err = fmt.Errorf("unsupported type for assetB")
 		return
 
 	}
 
+	if asset1.Id > asset2.Id {
+
+		pool.Asset1 = asset1
+		pool.Asset2 = asset2
+
+	} else {
+
+		pool.Asset1 = asset2
+		pool.Asset2 = asset1
+
+	}
+
 	if fetch {
+
 		err = pool.Refresh()
 		if err != nil {
 			return
 		}
-	} else if info != nil {
 
-		switch v := info.(type) {
-		case PoolInfo:
-			pool.UpdateFromInfo(v)
+	} else if !reflect.ValueOf(info).IsZero() {
 
-		default:
-			err = fmt.Errorf("unsupported type for info")
-			return
-		}
+		pool.UpdateFromInfo(info)
 
 	}
 
@@ -345,7 +336,7 @@ func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{
 
 }
 
-func MakePoolFromAccountInfo(accountInfo *indexer.LookupAccountByID, client client.TinymanClient) (pool Pool, err error) {
+func MakePoolFromAccountInfo(accountInfo models.Account, client client.TinymanClient) (pool Pool, err error) {
 
 	info, err := GetPoolInfoFromAccountInfo(accountInfo)
 
@@ -353,22 +344,17 @@ func MakePoolFromAccountInfo(accountInfo *indexer.LookupAccountByID, client clie
 		return
 	}
 
-	pool, err = MakePool(client, info.Asset1ID, info.Asset2ID, info, false, info.ValidatorAppId)
+	pool, err = MakePool(client, info.Asset1ID, info.Asset2ID, info, true, info.ValidatorAppId)
 
 	return
 
 }
 
-//TODO: is this logic good?
-func (s *Pool) RefreshWithInfo(info PoolInfo) {
-	s.UpdateFromInfo(info)
-}
-
 func (s *Pool) Refresh() (err error) {
 
 	info, err := GetPoolInfo(s.Client.Indexer, s.ValidatorAppID, s.Asset1.Id, s.Asset2.Id)
-	//TODO:return error maybe
-	if err != nil {
+
+	if err != nil || reflect.ValueOf(info).IsZero() {
 		return
 	}
 
