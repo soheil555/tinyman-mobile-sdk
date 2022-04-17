@@ -56,7 +56,7 @@ func (s *TinymanClient) FetchAsset(assetID uint64) types.Asset {
 	if _, ok := s.AssetsCache[assetID]; !ok {
 
 		asset := types.Asset{Id: assetID}
-		asset.Fetch(s.Algod)
+		asset.Fetch(s.Indexer)
 		s.AssetsCache[assetID] = asset
 
 	}
