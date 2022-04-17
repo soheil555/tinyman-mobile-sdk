@@ -4,6 +4,7 @@ import (
 	"context"
 	b64 "encoding/base64"
 	"encoding/binary"
+	"reflect"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/constants"
@@ -46,8 +47,7 @@ func MakeTinymanMainnetClient(algodClient *algod.Client, indexerClient *indexer.
 
 }
 
-//TODO: implement later
-//TODO: cycle import error
+//TODO: implement later, cycle import error
 func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 }
 
@@ -67,7 +67,6 @@ func (s *TinymanClient) FetchAsset(assetID uint64) types.Asset {
 
 func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
-	//TODO: maybe better way
 	var signedGroup []byte
 
 	for _, txn := range transactionGroup.SignedTransactions {
@@ -91,7 +90,7 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 
 func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
 
-	if (userAddress == algoTypes.Address{}) {
+	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
@@ -102,17 +101,13 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Addres
 
 	txnGroup, err = optin.PrepareAppOptinTransactions(s.ValidatorAppId, userAddress, suggestedParams)
 
-	if err != nil {
-		return
-	}
-
 	return
 
 }
 
 func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
 
-	if (userAddress == algoTypes.Address{}) {
+	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
@@ -123,42 +118,34 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddres
 
 	txnGroup, err = optin.PrepareAssetOptinTransactions(assetID, userAddress, suggestedParams)
 
-	if err != nil {
-		return
-	}
-
 	return
 
 }
 
 func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools map[string]map[types.Asset]types.AssetAmount, err error) {
 
-	//TODO: is pools type ok?
 	pools = make(map[string]map[types.Asset]types.AssetAmount)
 
-	if (userAddress == algoTypes.Address{}) {
+	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
-	accountInfo, err := s.Algod.AccountInformation(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return
 	}
 
-	var validatorApps []models.ApplicationLocalState
 	var validatorApp models.ApplicationLocalState
 
 	for _, a := range accountInfo.AppsLocalState {
 
 		if a.Id == s.ValidatorAppId {
-			validatorApps = append(validatorApps, a)
+			validatorApp = a
 		}
 
 	}
 
-	if len(validatorApps) > 0 {
-		validatorApp = validatorApps[0]
-	} else {
+	if reflect.ValueOf(validatorApp).IsZero() {
 		return
 	}
 
@@ -179,8 +166,8 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 		bLen := len(b)
 
-		//TODO: is it correct?
-		if bLen >= 9 && b[bLen-9] == 101 {
+		if bLen >= 9 && b[bLen-9] == byte('e') {
+
 			value := validatorAppState[key].Uint
 			var poolAddress string
 			poolAddress, err = algoTypes.EncodeAddress(b[:bLen-9])
@@ -207,11 +194,11 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 func (s *TinymanClient) IsOptIn(userAddress algoTypes.Address) (bool, error) {
 
-	if (userAddress == algoTypes.Address{}) {
+	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
-	accountInfo, err := s.Algod.AccountInformation(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}
@@ -227,11 +214,11 @@ func (s *TinymanClient) IsOptIn(userAddress algoTypes.Address) (bool, error) {
 
 func (s *TinymanClient) AssetIsOptedIn(assetID uint64, userAddress algoTypes.Address) (bool, error) {
 
-	if (userAddress == algoTypes.Address{}) {
+	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
-	accountInfo, err := s.Algod.AccountInformation(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}

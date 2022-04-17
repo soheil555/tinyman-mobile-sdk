@@ -33,7 +33,7 @@ func PrepareRedeemFeesTransactions(validatorAppId uint64, asset1ID uint64, asset
 		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
 	}
 
-	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("fees")}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("fees")}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -45,7 +45,7 @@ func PrepareRedeemFeesTransactions(validatorAppId uint64, asset1ID uint64, asset
 		return
 	}
 
-	txns := []algoTypes.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn}
+	txns := []algoTypes.Transaction{paymentTxn, applicationNoOpTxn, assetTransferTxn}
 
 	txnGroup, err = utils.MakeTransactionGroup(txns)
 
@@ -54,9 +54,6 @@ func PrepareRedeemFeesTransactions(validatorAppId uint64, asset1ID uint64, asset
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
-	if err != nil {
-		return
-	}
 
 	return
 

@@ -33,7 +33,7 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
 	}
 
-	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("mint")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("mint")}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -63,7 +63,7 @@ func PrepareMintTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		return
 	}
 
-	txns := []algoTypes.Transaction{paymentTxn, applicationNoOptTxn, assetTransferTxn1, assetTransferTxn2, assetTransferTxn3}
+	txns := []algoTypes.Transaction{paymentTxn, applicationNoOpTxn, assetTransferTxn1, assetTransferTxn2, assetTransferTxn3}
 
 	txnGroup, err = utils.MakeTransactionGroup(txns)
 

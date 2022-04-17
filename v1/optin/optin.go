@@ -25,7 +25,6 @@ func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address
 
 func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
 
-	//TODO: is it the same as AssetOptInTxn
 	txn, err := future.MakeAssetTransferTxn(sender.String(), sender.String(), 0, nil, suggestedParams, "", assetID)
 	if err != nil {
 		return

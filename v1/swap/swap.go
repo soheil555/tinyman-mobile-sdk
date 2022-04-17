@@ -46,7 +46,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
 	}
 
-	applicationNoOptTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -76,7 +76,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		return
 	}
 
-	txns := []algoTypes.Transaction{paymentTxn, applicationNoOptTxn, assetTransferInTxn, assetTransferOutTxn}
+	txns := []algoTypes.Transaction{paymentTxn, applicationNoOpTxn, assetTransferInTxn, assetTransferOutTxn}
 
 	txnGroup, err = utils.MakeTransactionGroup(txns)
 
@@ -85,9 +85,6 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
-	if err != nil {
-		return
-	}
 
 	return
 
