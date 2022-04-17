@@ -12,7 +12,7 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func Hex2Int(hexStr string) uint64 {
+func hex2Int(hexStr string) uint64 {
 
 	cleaned := strings.Replace(hexStr, "0x", "", -1)
 
@@ -32,8 +32,8 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	if asset1ID > asset2ID {
-		err = fmt.Errorf("asset2ID must be greate than equal asset1ID")
+	if asset1ID <= asset2ID {
+		err = fmt.Errorf("asset1ID must be greater than to asset2ID")
 		return
 	}
 
@@ -67,13 +67,12 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		return
 	}
 
-	assetCreateTxn, err := future.MakeAssetCreateTxn(poolAddress.String(), nil, suggestedParams, Hex2Int("0xFFFFFFFFFFFFFFFF"), 6, false, "", "", "", "", "TMPOOL11", fmt.Sprintf("TinymanPool1.1 {%s}-{%s}", asset1UnitName, asset2UnitName), "https://tinyman.org", "")
+	assetCreateTxn, err := future.MakeAssetCreateTxn(poolAddress.String(), nil, suggestedParams, hex2Int("0xFFFFFFFFFFFFFFFF"), 6, false, "", "", "", "", "TMPOOL11", fmt.Sprintf("TinymanPool1.1 {%s}-{%s}", asset1UnitName, asset2UnitName), "https://tinyman.org", "")
 
 	if err != nil {
 		return
 	}
 
-	//TODO: is it the same as AssetOptInTxn
 	assetOptInTxn1, err := future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset1ID)
 	if err != nil {
 		return
@@ -99,9 +98,6 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	}
 
 	err = txnGroup.SignWithLogicsig(poolLogicsig)
-	if err != nil {
-		return
-	}
 
 	return
 }
