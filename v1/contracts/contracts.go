@@ -11,8 +11,6 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-//TODO: is embedding ok
-
 //go:embed asc.json
 var f embed.FS
 
@@ -58,15 +56,7 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (l
 		return
 	}
 
-	var args [][]byte
-
-	ma := crypto.MultisigAccount{}
-
-	lsig, err = crypto.MakeLogicSig(programBytes, args, nil, ma)
-
-	if err != nil {
-		return
-	}
+	lsig, err = crypto.MakeLogicSig(programBytes, [][]byte{}, nil, crypto.MultisigAccount{})
 
 	return
 
