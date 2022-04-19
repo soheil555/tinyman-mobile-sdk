@@ -542,6 +542,8 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn types.AssetAmount, slippage float
 			s.Asset1: {Asset: s.Asset1, Amount: asset1Amount},
 			s.Asset2: {Asset: s.Asset2, Amount: asset2Amount},
 		},
+		LiquidityAssetAmount: liquidityAssetIn,
+		Slippage:             slippage,
 	}
 
 	return
@@ -959,10 +961,13 @@ func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition 
 		return nil, err
 	}
 
+	fmt.Println("quote.LiquidityAssetAmount:", quote.LiquidityAssetAmount)
+
 	return map[interface{}]interface{}{
-		s.Asset1: quote.AmountsOut[s.Asset1],
-		s.Asset2: quote.AmountsOut[s.Asset2],
-		"share":  float64(liquidityAssetAmount) / float64(s.IssuedLiquidity),
+		s.Asset1:         quote.AmountsOut[s.Asset1],
+		s.Asset2:         quote.AmountsOut[s.Asset2],
+		s.LiquidityAsset: quote.LiquidityAssetAmount,
+		"share":          float64(liquidityAssetAmount) / float64(s.IssuedLiquidity),
 	}, nil
 
 }
