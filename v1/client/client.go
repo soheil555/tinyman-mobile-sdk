@@ -51,17 +51,23 @@ func MakeTinymanMainnetClient(algodClient *algod.Client, indexerClient *indexer.
 func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 }
 
-func (s *TinymanClient) FetchAsset(assetID uint64) types.Asset {
+func (s *TinymanClient) FetchAsset(assetID uint64) (asset types.Asset, err error) {
 
 	if _, ok := s.AssetsCache[assetID]; !ok {
 
-		asset := types.Asset{Id: assetID}
-		asset.Fetch(s.Indexer)
+		asset = types.Asset{Id: assetID}
+		err = asset.Fetch(s.Indexer)
+
+		if err != nil {
+			return
+		}
+
 		s.AssetsCache[assetID] = asset
 
 	}
 
-	return s.AssetsCache[assetID]
+	asset = s.AssetsCache[assetID]
+	return
 
 }
 
@@ -181,7 +187,16 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 			}
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
-			asset := s.FetchAsset(assetID)
+			var asset types.Asset
+			asset, err = s.FetchAsset(assetID)
+			if err != nil {
+				return
+			}
+
+			if pools[poolAddress] == nil {
+				pools[poolAddress] = make(map[types.Asset]types.AssetAmount)
+			}
+
 			pools[poolAddress][asset] = types.AssetAmount{Asset: asset, Amount: value}
 
 		}

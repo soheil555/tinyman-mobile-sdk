@@ -64,20 +64,31 @@ func main() {
 	}
 
 	// Fetch our two assets of interest
-	TINYUSDC := client.FetchAsset(21582668)
-	ALGO := client.FetchAsset(0)
+	TINYUSDC, err := client.FetchAsset(21582668)
+	if err != nil {
+		fmt.Printf("error fetching asset: %s\n", err)
+		return
+	}
+
+	ALGO, err := client.FetchAsset(0)
+	if err != nil {
+		fmt.Printf("error fetching asset: %s\n", err)
+		return
+	}
 
 	// Fetch the pool we will work with
 	//TODO: make pool from client
 	pool, err := pools.MakePool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
+
+	fmt.Println("pool.LiquidityAsset:", pool.LiquidityAsset)
 
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)
 		return
 	}
 
-	// Get a quote for supplying 1000.0 TinyUSDC
-	quote, err := pool.FetchMintQuote(TINYUSDC.Call(1000_000_000), types.AssetAmount{}, 0.01)
+	// Get a quote for supplying 10.0 TinyUSDC
+	quote, err := pool.FetchMintQuote(TINYUSDC.Call(10_000_000), types.AssetAmount{}, 0.01)
 	if err != nil {
 		fmt.Printf("error Fetching MintQuote: %s\n", err)
 		return
@@ -87,7 +98,7 @@ func main() {
 
 	// Check if we are happy with the quote...
 	//TODO: in python code quote.AmountsIn[ALGO] considered to be number
-	if quote.AmountsIn[ALGO].Amount < 7_000_000 {
+	if quote.AmountsIn[ALGO].Amount < 20_000_000 {
 
 		// Prepare the mint transactions from the quote and sign them
 		transactionGroup, err := pool.PrepareMintTransactionsFromQuote(quote, algoTypes.Address{})
@@ -99,9 +110,11 @@ func main() {
 		transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
 		_, _, err = client.Submit(transactionGroup, true)
 		if err != nil {
-			fmt.Printf("error submit transactions: %s\n", err)
+			fmt.Printf("error submit transactions 1: %s\n", err)
 			return
 		}
+
+		fmt.Println("here 1")
 
 		// Check if any excess liquidity asset remaining after the mint
 		excess, err := pool.FetchExcessAmounts(algoTypes.Address{})
@@ -110,11 +123,18 @@ func main() {
 			return
 		}
 
+		fmt.Println("here 2")
+
 		if amount, ok := excess[pool.LiquidityAsset]; ok {
+
+			fmt.Println("here 3")
 
 			fmt.Printf("Excess: %v\n", amount.Amount)
 
 			if amount.Amount > 1_000_000 {
+
+				fmt.Println("here 4")
+
 				transactionGroup, err := pool.PrepareRedeemTransactions(amount, algoTypes.Address{})
 				if err != nil {
 					fmt.Printf("error preparing redeem transactions: %s\n", err)
@@ -124,15 +144,19 @@ func main() {
 				transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
 				_, _, err = client.Submit(transactionGroup, true)
 				if err != nil {
-					fmt.Printf("error submit transactions: %s\n", err)
+					fmt.Printf("error submit transactions 2: %s\n", err)
 					return
 				}
+
+				fmt.Println("here 5")
 
 			}
 
 		}
 
 	}
+
+	fmt.Println("here 6")
 
 	info, err := pool.FetchPoolPosition(algoTypes.Address{})
 	if err != nil {

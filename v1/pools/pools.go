@@ -272,9 +272,8 @@ type Pool struct {
 
 //TODO: is validatorID == 0 a valid ID
 //TODO: assetA and assetB could be either int or Asset. but what if input is some type like uint64
-func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{}, info PoolInfo, fetch bool, validatorAppId uint64) (pool Pool, err error) {
+func MakePool(client client.TinymanClient, assetA types.Asset, assetB types.Asset, info PoolInfo, fetch bool, validatorAppId uint64) (pool Pool, err error) {
 
-	var asset1, asset2 types.Asset
 	pool.Client = client
 
 	if validatorAppId == 0 {
@@ -283,39 +282,15 @@ func MakePool(client client.TinymanClient, assetA interface{}, assetB interface{
 		pool.ValidatorAppId = validatorAppId
 	}
 
-	switch v := assetA.(type) {
+	if assetA.Id > assetB.Id {
 
-	case int:
-		asset1 = client.FetchAsset(uint64(v))
-	case types.Asset:
-		asset1 = v
-	default:
-		err = fmt.Errorf("unsupported type for assetA")
-		return
-
-	}
-
-	switch v := assetB.(type) {
-
-	case int:
-		asset2 = client.FetchAsset(uint64(v))
-	case types.Asset:
-		asset2 = v
-	default:
-		err = fmt.Errorf("unsupported type for assetB")
-		return
-
-	}
-
-	if asset1.Id > asset2.Id {
-
-		pool.Asset1 = asset1
-		pool.Asset2 = asset2
+		pool.Asset1 = assetA
+		pool.Asset2 = assetB
 
 	} else {
 
-		pool.Asset1 = asset2
-		pool.Asset2 = asset1
+		pool.Asset1 = assetB
+		pool.Asset2 = assetA
 
 	}
 
@@ -344,7 +319,18 @@ func MakePoolFromAccountInfo(accountInfo models.Account, client client.TinymanCl
 		return
 	}
 
-	pool, err = MakePool(client, info.Asset1Id, info.Asset2Id, info, true, info.ValidatorAppId)
+	asset1, err := client.FetchAsset(info.Asset1Id)
+
+	if err != nil {
+		return
+	}
+
+	asset2, err := client.FetchAsset(info.Asset2Id)
+	if err != nil {
+		return
+	}
+
+	pool, err = MakePool(client, asset1, asset2, info, true, info.ValidatorAppId)
 
 	return
 
