@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/v1/client"
 	"tinyman-mobile-sdk/v1/pools"
@@ -12,29 +13,41 @@ import (
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
+	"github.com/joho/godotenv"
 	"github.com/kr/pretty"
 )
 
+// This sample is provided for demonstration purposes only.
+// It is not intended for production use.
+// This example does not constitute trading advice.
+
 func main() {
+
+	err := godotenv.Load("../../.env")
+
+	if err != nil {
+		fmt.Println("Error loading .env file")
+		return
+	}
 
 	// Hardcoding account keys is not a great practice. This is for demonstration purposes only.
 	// See the README & Docs for alternative signing methods.
-	userAccount, err := crypto.AccountFromPrivateKey([]byte{})
+
+	privateKey, err := mnemonic.ToPrivateKey(os.Getenv("MNEMONIC"))
+
+	if err != nil {
+		fmt.Printf("error generating private key from mnemonic: %s\n", err)
+		return
+	}
+
+	userAccount, err := crypto.AccountFromPrivateKey(privateKey)
 
 	if err != nil {
 		fmt.Printf("error import account from private key: %s\n", err)
 		return
 	}
 
-	mnemonic, err := mnemonic.FromPrivateKey(userAccount.PrivateKey)
-
-	if err != nil {
-		fmt.Printf("error generating mnemonic from private key: %s\n", err)
-		return
-	}
-
 	fmt.Printf("[+]user address: %s\n", userAccount.Address.String())
-	fmt.Printf("[+]mnemonic: %s\n", mnemonic)
 
 	headers := []*common.Header{
 		{
@@ -92,6 +105,7 @@ func main() {
 		return
 	}
 
+	//TODO: in some places we use pointer but in some places, we don't. what to do
 	pretty.Println(quote)
 
 	// Check if we are happy with the quote...
@@ -144,16 +158,14 @@ func main() {
 
 	}
 
-	info, err := pool.FetchPoolPosition(algoTypes.Address{})
+	info, share, err := pool.FetchPoolPosition(algoTypes.Address{})
 	if err != nil {
 		fmt.Printf("error fetching pool position: %s\n", err)
 		return
 	}
 
-	share := info["share"].(float64) * 100
-
 	fmt.Printf("Pool Tokens: %v\n", info[pool.LiquidityAsset])
 	fmt.Printf("Assets: %v, %v\n", info[TINYUSDC], info[ALGO])
-	fmt.Printf("share of pool: %f\n", share)
+	fmt.Printf("share of pool: %.3f\n", share*100)
 
 }

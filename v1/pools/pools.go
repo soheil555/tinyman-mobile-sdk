@@ -931,7 +931,7 @@ func (s *Pool) FetchExcessAmounts(userAddress algoTypes.Address) (excessAmounts 
 
 }
 
-func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition map[interface{}]interface{}, err error) {
+func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition map[types.Asset]types.AssetAmount, share float64, err error) {
 
 	if poolerAddress.IsZero() {
 		poolerAddress = s.Client.UserAddress
@@ -958,17 +958,18 @@ func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition 
 
 	quote, err := s.FetchBurnQuoteWithDefaultSlippage(liquidityAssetIn)
 	if err != nil {
-		return nil, err
+		return
 	}
 
-	fmt.Println("quote.LiquidityAssetAmount:", quote.LiquidityAssetAmount)
-
-	return map[interface{}]interface{}{
-		s.Asset1:         quote.AmountsOut[s.Asset1],
-		s.Asset2:         quote.AmountsOut[s.Asset2],
+	poolPosition = map[types.Asset]types.AssetAmount{
+		s.Asset1:         *quote.AmountsOut[s.Asset1],
+		s.Asset2:         *quote.AmountsOut[s.Asset2],
 		s.LiquidityAsset: quote.LiquidityAssetAmount,
-		"share":          float64(liquidityAssetAmount) / float64(s.IssuedLiquidity),
-	}, nil
+	}
+
+	share = float64(liquidityAssetAmount) / float64(s.IssuedLiquidity)
+
+	return
 
 }
 
