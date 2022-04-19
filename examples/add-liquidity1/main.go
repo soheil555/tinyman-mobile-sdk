@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/v1/client"
 	"tinyman-mobile-sdk/v1/pools"
 
@@ -10,7 +11,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
-	"github.com/algorand/go-algorand-sdk/types"
+	algoTypes "github.com/algorand/go-algorand-sdk/types"
 	"github.com/kr/pretty"
 )
 
@@ -76,7 +77,7 @@ func main() {
 	}
 
 	// Get a quote for supplying 1000.0 TinyUSDC
-	quote, err := pool.FetchMintQuote(TINYUSDC.Call(1000_000_000), nil, 0.01)
+	quote, err := pool.FetchMintQuote(TINYUSDC.Call(1000_000_000), types.AssetAmount{}, 0.01)
 	if err != nil {
 		fmt.Printf("error Fetching MintQuote: %s\n", err)
 		return
@@ -89,7 +90,7 @@ func main() {
 	if quote.AmountsIn[ALGO].Amount < 7_000_000 {
 
 		// Prepare the mint transactions from the quote and sign them
-		transactionGroup, err := pool.PrepareMintTransactionsFromQuote(quote, types.Address{})
+		transactionGroup, err := pool.PrepareMintTransactionsFromQuote(quote, algoTypes.Address{})
 		if err != nil {
 			fmt.Printf("error preparing mint transactions from quote: %s\n", err)
 			return
@@ -103,7 +104,7 @@ func main() {
 		}
 
 		// Check if any excess liquidity asset remaining after the mint
-		excess, err := pool.FetchExcessAmounts(types.Address{})
+		excess, err := pool.FetchExcessAmounts(algoTypes.Address{})
 		if err != nil {
 			fmt.Printf("error fetching excess amounts: %s\n", err)
 			return
@@ -114,7 +115,7 @@ func main() {
 			fmt.Printf("Excess: %v\n", amount.Amount)
 
 			if amount.Amount > 1_000_000 {
-				transactionGroup, err := pool.PrepareRedeemTransactions(amount, types.Address{})
+				transactionGroup, err := pool.PrepareRedeemTransactions(amount, algoTypes.Address{})
 				if err != nil {
 					fmt.Printf("error preparing redeem transactions: %s\n", err)
 					return
@@ -133,7 +134,7 @@ func main() {
 
 	}
 
-	info, err := pool.FetchPoolPosition(types.Address{})
+	info, err := pool.FetchPoolPosition(algoTypes.Address{})
 	if err != nil {
 		fmt.Printf("error fetching pool position: %s\n", err)
 		return
