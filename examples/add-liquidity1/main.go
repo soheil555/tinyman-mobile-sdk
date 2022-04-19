@@ -68,7 +68,7 @@ func main() {
 
 	// Fetch the pool we will work with
 	//TODO: make pool from client
-	pool, err := pools.MakePool(client, TINYUSDC, ALGO, nil, true, nil)
+	pool, err := pools.MakePool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
 
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)
