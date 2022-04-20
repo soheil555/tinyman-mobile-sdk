@@ -71,7 +71,7 @@ func (s *TinymanClient) FetchAsset(assetID uint64) (asset types.Asset, err error
 
 }
 
-func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
 	var signedGroup []byte
 
@@ -207,7 +207,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 }
 
-func (s *TinymanClient) IsOptIn(userAddress algoTypes.Address) (bool, error) {
+func (s *TinymanClient) IsOptedIn(userAddress algoTypes.Address) (bool, error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.UserAddress
