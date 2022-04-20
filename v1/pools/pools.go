@@ -5,6 +5,7 @@ import (
 	b64 "encoding/base64"
 	"fmt"
 	"math"
+	"math/big"
 	"reflect"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
@@ -579,24 +580,25 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn types.AssetAmount, slippage flo
 		outputSupply = s.Asset1Reserves
 	}
 
-	//TODO: is 0 as valid value for inputSupply and outputSupply
 	if inputSupply == 0 || outputSupply == 0 {
 		err = fmt.Errorf("pool has no liquidity")
 		return
 	}
 
-	k := inputSupply * outputSupply
-	assetInAmountMinusFee := float64(assetInAmount*997) / float64(1000)
-	swapFees := float64(assetInAmount) - assetInAmountMinusFee
-	assetOutAmount := float64(outputSupply) - (float64(k) / (float64(inputSupply) + assetInAmountMinusFee))
+	k := new(big.Int).Mul(big.NewInt(int64(inputSupply)), big.NewInt(int64(outputSupply)))
+	assetInAmountMinusFee := assetInAmount * 997 / 1000
+	swapFees := assetInAmount - assetInAmountMinusFee
 
-	amountOut := types.AssetAmount{Asset: assetOut, Amount: uint64(assetOutAmount)}
+	tmp := new(big.Int).Div(k, big.NewInt(int64(inputSupply+assetInAmountMinusFee)))
+	assetOutAmount := new(big.Int).Sub(big.NewInt(int64(outputSupply)), tmp)
+
+	amountOut := types.AssetAmount{Asset: assetOut, Amount: assetOutAmount.Uint64()}
 
 	quote = SwapQuote{
 		SwapType:  "fixed-input",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: uint64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: swapFees},
 		Slippage:  slippage,
 	}
 
@@ -655,7 +657,6 @@ func (s *Pool) FetchFixedOutputSwapQuoteWithDefaultSlippage(amountOut types.Asse
 	return s.FetchFixedOutputSwapQuote(amountOut, 0.05)
 }
 
-//TODO: use address way of empty on others
 func (s *Pool) PrepareSwapTransactions(amountIn types.AssetAmount, amountOut types.AssetAmount, swapType string, swapperAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
 
 	if swapperAddress.IsZero() {

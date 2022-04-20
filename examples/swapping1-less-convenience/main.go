@@ -69,7 +69,8 @@ func main() {
 		return
 	}
 
-	client := client.MakeTinymanClient(algodClient, indexerClient, 21580889, algoTypes.Address{})
+	//TODO: in python code validatorID is for v1.0
+	client := client.MakeTinymanClient(algodClient, indexerClient, 62368684, algoTypes.Address{})
 	// By default all subsequent operations are on behalf of userAccount
 
 	// Check if the account is opted into Tinyman and optin if necessary
@@ -151,7 +152,7 @@ func main() {
 	}
 
 	// We only want to sell if ALGO is > 180 TINYUSDC (It's testnet!)
-	if priceWithSlippage > 180 {
+	if priceWithSlippage > 110 {
 		fmt.Printf("Swapping %v to %v\n", quote.AmountIn, priceWithSlippage)
 
 		// Prepare a transaction group
@@ -213,7 +214,7 @@ func main() {
 			fmt.Printf("Excess: %d\n", excess.Amount)
 
 			// We might just let the excess accumulate rather than redeeming if its < 1 TinyUSDC
-			if excess.Amount > 1_000_000 {
+			if excess.Amount > 1_000 {
 
 				fmt.Println("redeeming excess amount...")
 				transactionGroup, err := pool.PrepareRedeemTransactions(excess, userAccount.Address)

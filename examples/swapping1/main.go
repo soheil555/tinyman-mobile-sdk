@@ -146,7 +146,7 @@ func main() {
 	fmt.Printf("TINYUSDC per ALGO (worst case): %f\n", priceWithSlippage)
 
 	// We only want to sell if ALGO is > 180 TINYUSDC (It's testnet!)
-	if priceWithSlippage > 180 {
+	if priceWithSlippage > 110 {
 
 		amountOutWithSlippage, err := quote.AmountOutWithSlippage()
 		if err != nil {
@@ -164,7 +164,7 @@ func main() {
 		}
 
 		// Sign the group with our key
-		err = transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
+		err = transactionGroup.SignWithPrivateKey(userAccount.Address, privateKey)
 		if err != nil {
 			fmt.Printf("error signing swap transactionGroup: %s\n", err)
 			return
@@ -189,7 +189,7 @@ func main() {
 			fmt.Printf("Excess: %d \n", excess.Amount)
 
 			// We might just let the excess accumulate rather than redeeming if its < 1 TinyUSDC
-			if excess.Amount > 1_000_000 {
+			if excess.Amount > 1_000 {
 
 				fmt.Println("redeeming excess amount...")
 
