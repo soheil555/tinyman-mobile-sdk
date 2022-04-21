@@ -633,19 +633,23 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut types.AssetAmount, slippage f
 		outputSupply = s.Asset2Reserves
 	}
 
-	k := float64(inputSupply) * float64(outputSupply)
+	k := new(big.Int).Mul(big.NewInt(int64(inputSupply)), big.NewInt(int64(outputSupply)))
 
-	calculatedAmountInWithoutFee := (k / float64(outputSupply-assetOutAmount)) - float64(inputSupply)
-	assetInAmount := calculatedAmountInWithoutFee * 1000 / 997
-	swapFees := assetInAmount - calculatedAmountInWithoutFee
+	tmp := new(big.Int).Div(k, big.NewInt(int64(outputSupply-assetOutAmount)))
+	calculatedAmountInWithoutFee := new(big.Int).Sub(tmp, big.NewInt(int64(inputSupply)))
 
-	amountIn := types.AssetAmount{Asset: assetIn, Amount: uint64(assetInAmount)}
+	assetInAmount := new(big.Int).Mul(calculatedAmountInWithoutFee, big.NewInt(1000))
+	assetInAmount.Div(assetInAmount, big.NewInt(997))
+
+	swapFees := new(big.Int).Sub(assetInAmount, calculatedAmountInWithoutFee)
+
+	amountIn := types.AssetAmount{Asset: assetIn, Amount: assetInAmount.Uint64()}
 
 	quote = SwapQuote{
 		SwapType:  "fixed-output",
 		AmountIn:  amountIn,
 		AmountOut: amountOut,
-		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: uint64(swapFees)},
+		SwapFees:  types.AssetAmount{Asset: amountIn.Asset, Amount: swapFees.Uint64()},
 		Slippage:  slippage,
 	}
 
