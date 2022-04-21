@@ -78,7 +78,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 
 	txns := []algoTypes.Transaction{paymentTxn, applicationNoOpTxn, assetTransferInTxn, assetTransferOutTxn}
 
-	txnGroup, err = utils.MakeTransactionGroup(txns)
+	txnGroup, err = utils.NewTransactionGroup(txns)
 
 	if err != nil {
 		return

@@ -47,7 +47,7 @@ func PrepareRedeemFeesTransactions(validatorAppId uint64, asset1ID uint64, asset
 
 	txns := []algoTypes.Transaction{paymentTxn, applicationNoOpTxn, assetTransferTxn}
 
-	txnGroup, err = utils.MakeTransactionGroup(txns)
+	txnGroup, err = utils.NewTransactionGroup(txns)
 
 	if err != nil {
 		return

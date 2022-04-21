@@ -17,7 +17,7 @@ func PrepareAppOptinTransactions(validatorAppId uint64, sender algoTypes.Address
 
 	transactions := []algoTypes.Transaction{txn}
 
-	txnGroup, err = utils.MakeTransactionGroup(transactions)
+	txnGroup, err = utils.NewTransactionGroup(transactions)
 
 	return
 
@@ -32,7 +32,7 @@ func PrepareAssetOptinTransactions(assetID uint64, sender algoTypes.Address, sug
 
 	transactions := []algoTypes.Transaction{txn}
 
-	txnGroup, err = utils.MakeTransactionGroup(transactions)
+	txnGroup, err = utils.NewTransactionGroup(transactions)
 
 	return
 

@@ -66,7 +66,7 @@ func main() {
 		return
 	}
 
-	client, err := client.MakeTinymanTestnetClient(algodClient, indexerClient, userAccount.Address)
+	client, err := client.NewTinymanTestnetClient(algodClient, indexerClient, userAccount.Address)
 	// By default all subsequent operations are on behalf of userAccount
 
 	if err != nil {
@@ -89,7 +89,7 @@ func main() {
 
 	// Fetch the pool we will work with
 	//TODO: make pool from client
-	pool, err := pools.MakePool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
+	pool, err := pools.NewPool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
 
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)

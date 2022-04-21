@@ -266,7 +266,7 @@ func TestMakeTransactionGroup(t *testing.T) {
 
 	transactions := mockTransactions()
 
-	txnGroup, err := MakeTransactionGroup(transactions)
+	txnGroup, err := NewTransactionGroup(transactions)
 	assert.Nil(t, err)
 
 	assert.Equal(t, 2, len(txnGroup.Transactions))

@@ -92,7 +92,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 
 	}
 
-	txnGroup, err = utils.MakeTransactionGroup(txns)
+	txnGroup, err = utils.NewTransactionGroup(txns)
 	if err != nil {
 		return
 	}

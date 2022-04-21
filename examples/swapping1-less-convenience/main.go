@@ -71,7 +71,7 @@ func main() {
 	}
 
 	//TODO: in python code validatorID is for v1.0
-	client := client.MakeTinymanClient(algodClient, indexerClient, 62368684, algoTypes.Address{})
+	client := client.NewTinymanClient(algodClient, indexerClient, 62368684, algoTypes.Address{})
 	// By default all subsequent operations are on behalf of userAccount
 
 	// Check if the account is opted into Tinyman and optin if necessary
@@ -133,7 +133,7 @@ func main() {
 	ALGO := types.Asset{Id: 0, Name: "Algo", UnitName: "ALGO", Decimals: 6}
 
 	// Create the pool we will work with and fetch its on-chain state
-	pool, err := pools.MakePool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
+	pool, err := pools.NewPool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)
 		return

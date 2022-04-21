@@ -273,7 +273,7 @@ type Pool struct {
 
 //TODO: is validatorID == 0 a valid ID
 //TODO: assetA and assetB could be either int or Asset. but what if input is some type like uint64
-func MakePool(client client.TinymanClient, assetA types.Asset, assetB types.Asset, info PoolInfo, fetch bool, validatorAppId uint64) (pool Pool, err error) {
+func NewPool(client client.TinymanClient, assetA types.Asset, assetB types.Asset, info PoolInfo, fetch bool, validatorAppId uint64) (pool Pool, err error) {
 
 	pool.Client = client
 
@@ -312,7 +312,7 @@ func MakePool(client client.TinymanClient, assetA types.Asset, assetB types.Asse
 
 }
 
-func MakePoolFromAccountInfo(accountInfo models.Account, client client.TinymanClient) (pool Pool, err error) {
+func NewPoolFromAccountInfo(accountInfo models.Account, client client.TinymanClient) (pool Pool, err error) {
 
 	info, err := GetPoolInfoFromAccountInfo(accountInfo)
 
@@ -331,7 +331,7 @@ func MakePoolFromAccountInfo(accountInfo models.Account, client client.TinymanCl
 		return
 	}
 
-	pool, err = MakePool(client, asset1, asset2, info, true, info.ValidatorAppId)
+	pool, err = NewPool(client, asset1, asset2, info, true, info.ValidatorAppId)
 
 	return
 
