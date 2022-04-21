@@ -16,6 +16,7 @@ import (
 	"github.com/algorand/go-algorand-sdk/mnemonic"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 	"github.com/joho/godotenv"
+	"github.com/kr/pretty"
 )
 
 // This sample is provided for demonstration purposes only.
@@ -144,6 +145,9 @@ func main() {
 		fmt.Printf("error fetching fixed input swap quote: %s\n", err)
 		return
 	}
+
+	pretty.Println(quote)
+	fmt.Printf("TINYUSDC per ALGO: %f\n", quote.Price())
 
 	priceWithSlippage, err := quote.PriceWithSlippage()
 	if err != nil {
