@@ -8,10 +8,12 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareAppOptinTransactions(validatorAppId int, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareAppOptinTransactions(validatorAppId int, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
-	var senderAddress algoTypes.Address
-	copy(senderAddress[:], sender)
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	algoSuggestedParams := algoTypes.SuggestedParams{
 		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
@@ -24,7 +26,7 @@ func PrepareAppOptinTransactions(validatorAppId int, sender []byte, suggestedPar
 		MinFee:           uint64(suggestedParams.MinFee),
 	}
 
-	txn, err := future.MakeApplicationOptInTx(uint64(validatorAppId), nil, nil, nil, nil, algoSuggestedParams, senderAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	txn, err := future.MakeApplicationOptInTx(uint64(validatorAppId), nil, nil, nil, nil, algoSuggestedParams, sender, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -38,10 +40,12 @@ func PrepareAppOptinTransactions(validatorAppId int, sender []byte, suggestedPar
 
 }
 
-func PrepareAssetOptinTransactions(assetID int, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareAssetOptinTransactions(assetID int, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
-	var senderAddress algoTypes.Address
-	copy(senderAddress[:], sender)
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	algoSuggestedParams := algoTypes.SuggestedParams{
 		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
@@ -54,7 +58,7 @@ func PrepareAssetOptinTransactions(assetID int, sender []byte, suggestedParams t
 		MinFee:           uint64(suggestedParams.MinFee),
 	}
 
-	txn, err := future.MakeAssetTransferTxn(senderAddress.String(), senderAddress.String(), 0, nil, algoSuggestedParams, "", uint64(assetID))
+	txn, err := future.MakeAssetTransferTxn(sender.String(), sender.String(), 0, nil, algoSuggestedParams, "", uint64(assetID))
 	if err != nil {
 		return
 	}

@@ -23,10 +23,12 @@ func hex2Int(hexStr string) uint64 {
 
 }
 
-func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1UnitName, asset2UnitName string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1UnitName, asset2UnitName string, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
-	var senderAddress algoTypes.Address
-	copy(senderAddress[:], sender)
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	algoSuggestedParams := algoTypes.SuggestedParams{
 		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
@@ -62,7 +64,7 @@ func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1
 	} else {
 		paymentTxnAmount = 860000
 	}
-	paymentTxn, err := future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), paymentTxnAmount, []byte("fee"), "", algoSuggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), paymentTxnAmount, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -112,7 +114,11 @@ func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1
 		return
 	}
 
-	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	lsig := types.LogicSig{
+		Logic: poolLogicsig.Logic,
+	}
+
+	err = txnGroup.SignWithLogicsig(lsig)
 
 	return
 }

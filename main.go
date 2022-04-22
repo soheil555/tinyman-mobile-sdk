@@ -11,9 +11,9 @@ type A struct {
 
 func main() {
 
-	a := map[string]map[A]string{
+	a := map[string]map[*A]string{
 		"test": {
-			A{Name: "soheil"}: "test2",
+			&A{Name: "soheil"}: "test2",
 		},
 	}
 

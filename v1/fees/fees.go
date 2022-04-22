@@ -11,12 +11,17 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, amount string, creator, sender []byte, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, amount string, creatorAddress, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
-	var senderAddress, creatorAddress algoTypes.Address
+	creator, err := algoTypes.DecodeAddress(creatorAddress)
+	if err != nil {
+		return
+	}
 
-	copy(senderAddress[:], sender)
-	copy(creatorAddress[:], creator)
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	Amount, ok := new(big.Int).SetString(amount, 10)
 	if !ok {
@@ -42,7 +47,7 @@ func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidity
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	paymentTxn, err := future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -62,7 +67,7 @@ func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidity
 		return
 	}
 
-	assetTransferTxn, err := future.MakeAssetTransferTxn(poolAddress.String(), creatorAddress.String(), Amount.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
+	assetTransferTxn, err := future.MakeAssetTransferTxn(poolAddress.String(), creator.String(), Amount.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
 
 	if err != nil {
 		return
@@ -76,7 +81,11 @@ func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidity
 		return
 	}
 
-	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	lsig := types.LogicSig{
+		Logic: poolLogicsig.Logic,
+	}
+
+	err = txnGroup.SignWithLogicsig(lsig)
 
 	return
 

@@ -27,7 +27,7 @@ func readContractsFile() (data types.ASC, err error) {
 
 }
 
-func GetPoolLogicsig(validatorAppID int, asset1ID int, asset2ID int) (lsig types.LogicSig, err error) {
+func GetPoolLogicsig(validatorAppID, asset1ID, asset2ID int) (lsig *types.LogicSig, err error) {
 
 	contracts, err := readContractsFile()
 
@@ -35,10 +35,7 @@ func GetPoolLogicsig(validatorAppID int, asset1ID int, asset2ID int) (lsig types
 		return
 	}
 
-	poolLogicsigDefBytes, err := json.Marshal(contracts.Contracts.PoolLogicsig.Logic)
-	if err != nil {
-		return
-	}
+	poolLogicsigDef := contracts.Contracts.PoolLogicsig.Logic
 	// validatorAppDef := contracts.Contracts.ValidatorApp
 
 	assets := []int{asset1ID, asset2ID}
@@ -53,12 +50,7 @@ func GetPoolLogicsig(validatorAppID int, asset1ID int, asset2ID int) (lsig types
 		"asset_id_2":       assetID2,
 	}
 
-	variablesBytes, err := json.Marshal(variables)
-	if err != nil {
-		return
-	}
-
-	programBytes, err := utils.GetProgram(poolLogicsigDefBytes, variablesBytes)
+	programBytes, err := utils.GetProgram(poolLogicsigDef, variables)
 	if err != nil {
 		return
 	}
@@ -69,8 +61,6 @@ func GetPoolLogicsig(validatorAppID int, asset1ID int, asset2ID int) (lsig types
 	}
 
 	lsig.Logic = logsicSig.Logic
-	lsig.Msig = logsicSig.Msig
-	lsig.Sig = logsicSig.Sig
 
 	return
 

@@ -24,11 +24,16 @@ type TinymanClient struct {
 	algod          *algod.Client
 	indexer        *indexer.Client
 	ValidatorAppId int
-	assetsCache    map[int]assets.Asset
+	assetsCache    map[int]*assets.Asset
 	UserAddress    algoTypes.Address
 }
 
-func NewTinymanClient(algodClientURL string, indexerClientURL string, validatorAppId int, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func NewTinymanClient(algodClientURL, indexerClientURL string, validatorAppId int, userAddress string) (tinymanClient *TinymanClient, err error) {
+
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
+	}
 
 	headers := []*common.Header{
 		{
@@ -47,22 +52,22 @@ func NewTinymanClient(algodClientURL string, indexerClientURL string, validatorA
 		return
 	}
 
-	return TinymanClient{
+	return &TinymanClient{
 		algodClient,
 		indexerClient,
 		validatorAppId,
-		map[int]assets.Asset{},
-		userAddress,
+		map[int]*assets.Asset{},
+		user,
 	}, nil
 }
 
-func NewTinymanTestnetClient(algodClientURL string, indexerClientURL string, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAddress string) (tinymanClient *TinymanClient, err error) {
 
 	return NewTinymanClient(algodClientURL, indexerClientURL, constants.TESTNET_VALIDATOR_APP_ID, userAddress)
 
 }
 
-func NewTinymanMainnetClient(algodClientURL string, indexerClientURL string, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func NewTinymanMainnetClient(algodClientURL, indexerClientURL, userAddress string) (tinymanClient *TinymanClient, err error) {
 
 	return NewTinymanClient(algodClientURL, indexerClientURL, constants.MAINNET_VALIDATOR_APP_ID, userAddress)
 
@@ -72,11 +77,11 @@ func NewTinymanMainnetClient(algodClientURL string, indexerClientURL string, use
 // func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 // }
 
-func (s *TinymanClient) FetchAsset(assetID int) (asset assets.Asset, err error) {
+func (s *TinymanClient) FetchAsset(assetID int) (asset *assets.Asset, err error) {
 
 	if _, ok := s.assetsCache[assetID]; !ok {
 
-		asset = assets.Asset{Id: assetID}
+		asset = &assets.Asset{Id: assetID}
 		err = asset.Fetch(s.indexer)
 
 		if err != nil {
@@ -92,30 +97,36 @@ func (s *TinymanClient) FetchAsset(assetID int) (asset assets.Asset, err error) 
 
 }
 
-func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bool) (trxInfo *types.TrxInfo, err error) {
 
 	signedGroup := transactionGroup.GetSignedGroup()
 
 	sendRawTransaction := s.algod.SendRawTransaction(signedGroup)
-	Txid, err = sendRawTransaction.Do(context.Background())
+	txid, err := sendRawTransaction.Do(context.Background())
 
 	if err != nil {
 		return
 	}
 
 	if wait {
-		return utils.WaitForConfirmation(s.algod, Txid)
+		return utils.WaitForConfirmation(s.algod, txid)
 	}
+
+	trxInfo.TxId = txid
 
 	return
 
 }
 
-func (s *TinymanClient) PrepareAppOptinTransactions(userAddress []byte) (txnGroup *utils.TransactionGroup, err error) {
+func (s *TinymanClient) PrepareAppOptinTransactions(userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = make([]byte, len(s.UserAddress))
-		copy(userAddress, s.UserAddress[:])
+		userAddress = s.UserAddress.String()
+	}
+
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
 	}
 
 	algoSuggestedParams, err := s.algod.SuggestedParams().Do(context.Background())
@@ -123,7 +134,7 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress []byte) (txnGrou
 		return
 	}
 
-	suggestedParams := types.SuggestedParams{
+	suggestedParams := &types.SuggestedParams{
 		Fee:              int(algoSuggestedParams.Fee),
 		GenesisID:        algoSuggestedParams.GenesisID,
 		GenesisHash:      algoSuggestedParams.GenesisHash,
@@ -134,17 +145,21 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress []byte) (txnGrou
 		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
-	txnGroup, err = optin.PrepareAppOptinTransactions(s.ValidatorAppId, userAddress, suggestedParams)
+	txnGroup, err = optin.PrepareAppOptinTransactions(s.ValidatorAppId, user.String(), suggestedParams)
 
 	return
 
 }
 
-func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress []byte) (txnGroup *utils.TransactionGroup, err error) {
+func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = make([]byte, len(s.UserAddress))
-		copy(userAddress, s.UserAddress[:])
+		userAddress = s.UserAddress.String()
+	}
+
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
 	}
 
 	algoSuggestedParams, err := s.algod.SuggestedParams().Do(context.Background())
@@ -152,7 +167,7 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress [
 		return
 	}
 
-	suggestedParams := types.SuggestedParams{
+	suggestedParams := &types.SuggestedParams{
 		Fee:              int(algoSuggestedParams.Fee),
 		GenesisID:        algoSuggestedParams.GenesisID,
 		GenesisHash:      algoSuggestedParams.GenesisHash,
@@ -163,25 +178,26 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress [
 		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
-	txnGroup, err = optin.PrepareAssetOptinTransactions(assetID, userAddress, suggestedParams)
+	txnGroup, err = optin.PrepareAssetOptinTransactions(assetID, user.String(), suggestedParams)
 
 	return
 
 }
 
-func (s *TinymanClient) FetchExcessAmounts(userAddress []byte) (poolsString string, err error) {
+func (s *TinymanClient) FetchExcessAmounts(userAddress string) (excessAmounts string, err error) {
 
-	pools := make(map[string]map[assets.Asset]assets.AssetAmount)
+	pools := make(map[string]map[int]string)
 
 	if len(userAddress) == 0 {
-		userAddress = make([]byte, len(s.UserAddress))
-		copy(userAddress, s.UserAddress[:])
+		userAddress = s.UserAddress.String()
 	}
 
-	var UserAddress algoTypes.Address
-	copy(UserAddress[:], userAddress)
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
+	}
 
-	_, accountInfo, err := s.indexer.LookupAccountByID(UserAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(user.String()).Do(context.Background())
 	if err != nil {
 		return
 	}
@@ -232,43 +248,44 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress []byte) (poolsString stri
 			}
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
-			var asset assets.Asset
+			var asset *assets.Asset
 			asset, err = s.FetchAsset(int(assetID))
 			if err != nil {
 				return
 			}
 
 			if pools[poolAddress] == nil {
-				pools[poolAddress] = make(map[assets.Asset]assets.AssetAmount)
+				pools[poolAddress] = make(map[int]string)
 			}
 
-			pools[poolAddress][asset] = assets.AssetAmount{Asset: asset, Amount: value.String()}
+			pools[poolAddress][asset.Id] = value.String()
 
 		}
 
 	}
 
-	poolsBytes, err := json.Marshal(pools)
+	excessAmountsBytes, err := json.Marshal(pools)
 	if err != nil {
 		return
 	}
-	poolsString = string(poolsBytes)
+	excessAmounts = string(excessAmountsBytes)
 
 	return
 
 }
 
-func (s *TinymanClient) IsOptedIn(userAddress []byte) (bool, error) {
+func (s *TinymanClient) IsOptedIn(userAddress string) (bool, error) {
 
 	if len(userAddress) == 0 {
-		userAddress = make([]byte, len(s.UserAddress))
-		copy(userAddress, s.UserAddress[:])
+		userAddress = s.UserAddress.String()
 	}
 
-	var UserAddress algoTypes.Address
-	copy(UserAddress[:], userAddress)
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return false, err
+	}
 
-	_, accountInfo, err := s.indexer.LookupAccountByID(UserAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(user.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}
@@ -282,17 +299,18 @@ func (s *TinymanClient) IsOptedIn(userAddress []byte) (bool, error) {
 	return false, nil
 }
 
-func (s *TinymanClient) AssetIsOptedIn(assetID int, userAddress []byte) (bool, error) {
+func (s *TinymanClient) AssetIsOptedIn(assetID int, userAddress string) (bool, error) {
 
 	if len(userAddress) == 0 {
-		userAddress = make([]byte, len(s.UserAddress))
-		copy(userAddress, s.UserAddress[:])
+		userAddress = s.UserAddress.String()
 	}
 
-	var UserAddress algoTypes.Address
-	copy(UserAddress[:], userAddress)
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return false, err
+	}
 
-	_, accountInfo, err := s.indexer.LookupAccountByID(UserAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(user.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}
