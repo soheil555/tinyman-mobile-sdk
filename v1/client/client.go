@@ -103,6 +103,14 @@ func (s *TinymanClient) LookupAccountByID(address string) (validRound uint64, re
 
 }
 
+func (s *TinymanClient) AccountInformation(address string) (response models.Account, err error) {
+	return s.algod.AccountInformation(address).Do(context.Background())
+}
+
+func (s *TinymanClient) SuggestedParams() (params algoTypes.SuggestedParams, err error) {
+	return s.algod.SuggestedParams().Do(context.Background())
+}
+
 func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bool) (trxInfo *types.TrxInfo, err error) {
 
 	signedGroup := transactionGroup.GetSignedGroup()

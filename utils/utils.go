@@ -195,7 +195,7 @@ func IntToBytes(num int) []byte {
 	return data
 }
 
-func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
+func GetStateInt(state map[string]models.TealValue, key interface{}) int {
 
 	var keyString string
 
@@ -211,7 +211,7 @@ func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
 	}
 
 	if val, ok := state[keyString]; ok {
-		return val.Uint
+		return int(val.Uint)
 	}
 	return 0
 
