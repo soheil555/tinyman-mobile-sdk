@@ -1,4 +1,4 @@
-package types
+package assets
 
 import (
 	"context"

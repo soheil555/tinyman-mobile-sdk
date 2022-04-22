@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"math/big"
 	"reflect"
+	"tinyman-mobile-sdk/assets"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/constants"
@@ -23,7 +24,7 @@ type TinymanClient struct {
 	algod          *algod.Client
 	indexer        *indexer.Client
 	ValidatorAppId int
-	assetsCache    map[int]types.Asset
+	assetsCache    map[int]assets.Asset
 	UserAddress    algoTypes.Address
 }
 
@@ -50,7 +51,7 @@ func NewTinymanClient(algodClientURL string, indexerClientURL string, validatorA
 		algodClient,
 		indexerClient,
 		validatorAppId,
-		map[int]types.Asset{},
+		map[int]assets.Asset{},
 		userAddress,
 	}, nil
 }
@@ -71,11 +72,11 @@ func NewTinymanMainnetClient(algodClientURL string, indexerClientURL string, use
 // func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 // }
 
-func (s *TinymanClient) FetchAsset(assetID int) (asset types.Asset, err error) {
+func (s *TinymanClient) FetchAsset(assetID int) (asset assets.Asset, err error) {
 
 	if _, ok := s.assetsCache[assetID]; !ok {
 
-		asset = types.Asset{Id: assetID}
+		asset = assets.Asset{Id: assetID}
 		err = asset.Fetch(s.indexer)
 
 		if err != nil {
@@ -170,7 +171,7 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress [
 
 func (s *TinymanClient) FetchExcessAmounts(userAddress []byte) (poolsString string, err error) {
 
-	pools := make(map[string]map[types.Asset]types.AssetAmount)
+	pools := make(map[string]map[assets.Asset]assets.AssetAmount)
 
 	if len(userAddress) == 0 {
 		userAddress = make([]byte, len(s.UserAddress))
@@ -231,17 +232,17 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress []byte) (poolsString stri
 			}
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
-			var asset types.Asset
+			var asset assets.Asset
 			asset, err = s.FetchAsset(int(assetID))
 			if err != nil {
 				return
 			}
 
 			if pools[poolAddress] == nil {
-				pools[poolAddress] = make(map[types.Asset]types.AssetAmount)
+				pools[poolAddress] = make(map[assets.Asset]assets.AssetAmount)
 			}
 
-			pools[poolAddress][asset] = types.AssetAmount{Asset: asset, Amount: value.String()}
+			pools[poolAddress][asset] = assets.AssetAmount{Asset: asset, Amount: value.String()}
 
 		}
 
