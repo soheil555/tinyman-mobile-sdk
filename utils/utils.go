@@ -24,10 +24,16 @@ import (
 func GetProgram(definitionBytes []byte, variablesBytes []byte) (templateBytes []byte, err error) {
 
 	definition := types.Logic{}
-	json.Unmarshal(definitionBytes, &definition)
+	err = json.Unmarshal(definitionBytes, &definition)
+	if err != nil {
+		return
+	}
 
 	variables := map[string]int{}
-	json.Unmarshal(variablesBytes, &variables)
+	err = json.Unmarshal(variablesBytes, &variables)
+	if err != nil {
+		return
+	}
 
 	template := definition.Bytecode
 

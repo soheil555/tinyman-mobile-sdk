@@ -47,7 +47,7 @@ type PoolInfo struct {
 	LastRefreshedRound              uint64
 }
 
-func GetPoolInfo(indexer *indexer.Client, validatorAppID uint64, asset1ID uint64, asset2ID uint64) (poolInfo PoolInfo, err error) {
+func GetPoolInfo(indexer *indexer.Client, validatorAppID, asset1ID, asset2ID int) (poolInfo *PoolInfo, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppID, asset1ID, asset2ID)
 	if err != nil {
@@ -65,7 +65,7 @@ func GetPoolInfo(indexer *indexer.Client, validatorAppID uint64, asset1ID uint64
 
 }
 
-func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo PoolInfo, err error) {
+func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo, err error) {
 
 	if len(accountInfo.AppsLocalState) == 0 {
 		return

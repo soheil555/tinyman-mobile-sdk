@@ -21,7 +21,7 @@ func readContractsFile() (data types.ASC, err error) {
 		return
 	}
 
-	json.Unmarshal(file, &data)
+	err = json.Unmarshal(file, &data)
 
 	return
 
