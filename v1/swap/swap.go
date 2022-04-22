@@ -1,6 +1,8 @@
 package swap
 
 import (
+	"math/big"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/contracts"
 
@@ -9,13 +11,37 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, liquidityAssetID uint64, assetInID uint64, assetInAmount uint64, assetOutAmount uint64, swapType string, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
+func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID, assetInID int, assetInAmount, assetOutAmount string, swapType string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
 	if err != nil {
 		return
 	}
+
+	AssetInAmount, ok := new(big.Int).SetString(assetInAmount, 10)
+	if !ok {
+		return
+	}
+
+	AssetOutAmount, ok := new(big.Int).SetString(assetOutAmount, 10)
+	if !ok {
+		return
+	}
+
+	algoSuggestedParams := algoTypes.SuggestedParams{
+		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
+		GenesisID:        suggestedParams.GenesisID,
+		GenesisHash:      suggestedParams.GenesisHash,
+		FirstRoundValid:  algoTypes.Round(suggestedParams.FirstRoundValid),
+		LastRoundValid:   algoTypes.Round(suggestedParams.LastRoundValid),
+		ConsensusVersion: suggestedParams.ConsensusVersion,
+		FlatFee:          suggestedParams.FlatFee,
+		MinFee:           uint64(suggestedParams.MinFee),
+	}
+
+	var senderAddress algoTypes.Address
+	copy(senderAddress[:], sender)
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
@@ -24,7 +50,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		"fixed-output": "fo",
 	}
 
-	var assetOutID uint64
+	var assetOutID int
 
 	if assetInID == asset1ID {
 		assetOutID = asset2ID
@@ -32,7 +58,7 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 		assetOutID = asset1ID
 	}
 
-	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", suggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -41,12 +67,12 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	var foreignAssets []uint64
 
 	if asset2ID == 0 {
-		foreignAssets = []uint64{asset1ID, liquidityAssetID}
+		foreignAssets = []uint64{uint64(asset1ID), uint64(liquidityAssetID)}
 	} else {
-		foreignAssets = []uint64{asset1ID, asset2ID, liquidityAssetID}
+		foreignAssets = []uint64{uint64(asset1ID), uint64(asset2ID), uint64(liquidityAssetID)}
 	}
 
-	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(validatorAppId, [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{sender.String()}, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(uint64(validatorAppId), [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{senderAddress.String()}, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -55,9 +81,9 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	var assetTransferInTxn algoTypes.Transaction
 
 	if assetInID != 0 {
-		assetTransferInTxn, err = future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), assetInAmount, nil, suggestedParams, "", assetInID)
+		assetTransferInTxn, err = future.MakeAssetTransferTxn(senderAddress.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetInID))
 	} else {
-		assetTransferInTxn, err = future.MakePaymentTxn(sender.String(), poolAddress.String(), assetInAmount, nil, "", suggestedParams)
+		assetTransferInTxn, err = future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, "", algoSuggestedParams)
 	}
 
 	if err != nil {
@@ -67,9 +93,9 @@ func PrepareSwapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID ui
 	var assetTransferOutTxn algoTypes.Transaction
 
 	if assetOutID != 0 {
-		assetTransferOutTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), assetOutAmount, nil, suggestedParams, "", assetOutID)
+		assetTransferOutTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), senderAddress.String(), AssetOutAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetOutID))
 	} else {
-		assetTransferOutTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), assetOutAmount, nil, "", suggestedParams)
+		assetTransferOutTxn, err = future.MakePaymentTxn(poolAddress.String(), senderAddress.String(), AssetOutAmount.Uint64(), nil, "", algoSuggestedParams)
 	}
 
 	if err != nil {

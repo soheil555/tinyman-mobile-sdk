@@ -248,16 +248,24 @@ type TransactionGroup struct {
 	signedTransactions [][]byte
 }
 
-func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup TransactionGroup, err error) {
+func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup *TransactionGroup, err error) {
 
 	transactions, err = transaction.AssignGroupID(transactions, "")
 	if err != nil {
-		return TransactionGroup{}, err
+		return
 	}
 
 	signedTransactions := make([][]byte, len(transactions))
-	return TransactionGroup{transactions, signedTransactions}, nil
+	return &TransactionGroup{transactions, signedTransactions}, nil
 
+}
+
+func (s *TransactionGroup) GetTransactions() []algoTypes.Transaction {
+	return s.transactions
+}
+
+func (s *TransactionGroup) GetSignedTransactions() [][]byte {
+	return s.signedTransactions
 }
 
 // TODO: what is user
