@@ -5,6 +5,7 @@ import (
 	"crypto/ed25519"
 	b64 "encoding/base64"
 	"encoding/binary"
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
@@ -20,7 +21,13 @@ import (
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition types.Logic, variables map[string]uint64) (templateBytes []byte, err error) {
+func GetProgram(definitionBytes []byte, variablesBytes []byte) (templateBytes []byte, err error) {
+
+	definition := types.Logic{}
+	json.Unmarshal(definitionBytes, &definition)
+
+	variables := map[string]int{}
+	json.Unmarshal(variablesBytes, &variables)
 
 	template := definition.Bytecode
 
@@ -69,7 +76,7 @@ func GetProgram(definition types.Logic, variables map[string]uint64) (templateBy
 }
 
 //TODO: does checking _type is required
-func EncodeValue(value uint64, _type string) (buf []byte, err error) {
+func EncodeValue(value int, _type string) (buf []byte, err error) {
 
 	if _type == "int" {
 
@@ -83,7 +90,7 @@ func EncodeValue(value uint64, _type string) (buf []byte, err error) {
 
 }
 
-func EncodeVarint(number uint64) (buf []byte) {
+func EncodeVarint(number int) (buf []byte) {
 
 	for {
 		towrite := number & 0x7f
@@ -186,9 +193,9 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.Pend
 
 }
 
-func IntToBytes(num uint64) []byte {
+func IntToBytes(num int) []byte {
 	data := make([]byte, 8)
-	binary.BigEndian.PutUint64(data[:], num)
+	binary.BigEndian.PutUint64(data[:], uint64(num))
 	return data
 }
 
@@ -237,8 +244,8 @@ func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 }
 
 type TransactionGroup struct {
-	Transactions       []algoTypes.Transaction
-	SignedTransactions [][]byte
+	transactions       []algoTypes.Transaction
+	signedTransactions [][]byte
 }
 
 func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup TransactionGroup, err error) {
@@ -262,19 +269,35 @@ func (s *TransactionGroup) Sign(user User) {
 	user.SignTransactionGroup(s)
 }
 
-func (s *TransactionGroup) SignWithLogicsig(logicsig algoTypes.LogicSig) (err error) {
+func (s *TransactionGroup) GetSignedGroup() (signedGroup []byte) {
+
+	for _, txn := range s.signedTransactions {
+		signedGroup = append(signedGroup, txn...)
+	}
+
+	return
+
+}
+
+func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) (err error) {
+
+	lsig := algoTypes.LogicSig{
+		Logic: logicsig.Logic,
+		Sig:   logicsig.Sig,
+		Msig:  logicsig.Msig,
+	}
 
 	address := crypto.AddressFromProgram(logicsig.Logic)
 
-	for i, txn := range s.Transactions {
+	for i, txn := range s.transactions {
 		if txn.Sender == address {
-			_, stxBytes, err := crypto.SignLogicsigTransaction(logicsig, txn)
+			_, stxBytes, err := crypto.SignLogicsigTransaction(lsig, txn)
 
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
 
-			s.SignedTransactions[i] = stxBytes
+			s.signedTransactions[i] = stxBytes
 		}
 	}
 
@@ -282,15 +305,18 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig algoTypes.LogicSig) (err er
 
 }
 
-func (s *TransactionGroup) SignWithPrivateKey(address algoTypes.Address, privateKey ed25519.PrivateKey) (err error) {
+func (s *TransactionGroup) SignWithPrivateKey(address []byte, privateKey []byte) (err error) {
 
-	for i, txn := range s.Transactions {
-		if txn.Sender == address {
+	var algoAddress algoTypes.Address
+	copy(algoAddress[:], address)
+
+	for i, txn := range s.transactions {
+		if txn.Sender == algoAddress {
 			_, stxBytes, err := crypto.SignTransaction(privateKey, txn)
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
-			s.SignedTransactions[i] = stxBytes
+			s.signedTransactions[i] = stxBytes
 		}
 	}
 
@@ -302,7 +328,7 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo model
 
 	var signedGroup []byte
 
-	for _, txn := range s.SignedTransactions {
+	for _, txn := range s.signedTransactions {
 
 		signedGroup = append(signedGroup, txn...)
 

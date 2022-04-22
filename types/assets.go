@@ -3,17 +3,17 @@ package types
 import (
 	"context"
 	"fmt"
-	"math"
+	"math/big"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 )
 
 type Asset struct {
-	Id       uint64
+	Id       int
 	Name     string
 	UnitName string
-	Decimals uint64
+	Decimals int
 }
 
 func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
@@ -22,7 +22,7 @@ func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
 
 	if s.Id > 0 {
 
-		_, asset, err := indexer.LookupAssetByID(s.Id).Do(context.Background())
+		_, asset, err := indexer.LookupAssetByID(uint64(s.Id)).Do(context.Background())
 
 		if err != nil {
 			return err
@@ -42,17 +42,17 @@ func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
 
 	s.Name = params.Name
 	s.UnitName = params.UnitName
-	s.Decimals = params.Decimals
+	s.Decimals = int(params.Decimals)
 
 	return
 
 }
 
-func (s *Asset) Call(amount uint64) (assetAmount AssetAmount) {
-	return AssetAmount{*s, amount}
+func (s *Asset) Call(amount string) (assetAmount *AssetAmount) {
+	return &AssetAmount{*s, amount}
 }
 
-func (s *Asset) Hash() uint64 {
+func (s *Asset) Hash() int {
 	return s.Id
 }
 
@@ -62,52 +62,140 @@ func (s *Asset) String() string {
 
 type AssetAmount struct {
 	Asset  Asset
-	Amount uint64
+	Amount string
 }
 
-func (s *AssetAmount) Mul(o float64) (assetAmount AssetAmount) {
-	return AssetAmount{s.Asset, uint64(float64(s.Amount) * o)}
+func (s *AssetAmount) Mul(o float64) (assetAmount *AssetAmount) {
+
+	sAmount, ok := new(big.Float).SetString(s.Amount)
+	if !ok {
+		return
+	}
+
+	mulResult := new(big.Float).Mul(sAmount, big.NewFloat(o))
+	Amount, _ := mulResult.Int(nil)
+
+	assetAmount = &AssetAmount{s.Asset, Amount.String()}
+	return
+
 }
 
-func (s *AssetAmount) Add(o AssetAmount) (assetAmount AssetAmount, err error) {
+func (s *AssetAmount) Add(o *AssetAmount) (assetAmount *AssetAmount, err error) {
+
 	if s.Asset != o.Asset {
 		err = fmt.Errorf("unsupported asset type for +")
 		return
 	}
 
-	assetAmount = AssetAmount{s.Asset, s.Amount + o.Amount}
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return
+	}
+
+	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	if !ok {
+		return
+	}
+
+	Amount := new(big.Int).Add(sAmount, oAmount)
+	assetAmount = &AssetAmount{s.Asset, Amount.String()}
 
 	return
+
 }
 
-//TODO: maybe using an overflow util to handle
-func (s *AssetAmount) Sub(o AssetAmount) (assetAmount AssetAmount, err error) {
+func (s *AssetAmount) Sub(o *AssetAmount) (assetAmount *AssetAmount, err error) {
+
 	if s.Asset != o.Asset {
 		err = fmt.Errorf("unsupported asset type for -")
 		return
 	}
 
-	assetAmount = AssetAmount{s.Asset, s.Amount - o.Amount}
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return
+	}
+
+	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	if !ok {
+		return
+	}
+
+	Amount := new(big.Int).Add(sAmount, oAmount)
+
+	assetAmount = &AssetAmount{s.Asset, Amount.String()}
 	return
+
 }
 
-func (s *AssetAmount) Gt(o AssetAmount) (bool, error) {
+func (s *AssetAmount) Eq(o *AssetAmount) (bool, error) {
+
+	if s.Asset != o.Asset {
+		return false, fmt.Errorf("unsupported asset type for ==")
+	}
+
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	return sAmount.Cmp(oAmount) == 0, nil
+
+}
+
+func (s *AssetAmount) Gt(o *AssetAmount) (bool, error) {
+
 	if s.Asset != o.Asset {
 		return false, fmt.Errorf("unsupported asset type for >")
 	}
 
-	return s.Amount > o.Amount, nil
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	return sAmount.Cmp(oAmount) > 0, nil
+
 }
 
-func (s *AssetAmount) Lt(o AssetAmount) (bool, error) {
+func (s *AssetAmount) Lt(o *AssetAmount) (bool, error) {
+
 	if s.Asset != o.Asset {
 		return false, fmt.Errorf("unsupported asset type for <")
 	}
 
-	return s.Amount < o.Amount, nil
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	if !ok {
+		return false, nil
+	}
+
+	return sAmount.Cmp(oAmount) < 0, nil
+
 }
 
 func (s *AssetAmount) String() string {
-	amount := float64(s.Amount) / math.Pow(10.0, float64(s.Asset.Decimals))
-	return fmt.Sprintf("%s('%f')", s.Asset.UnitName, amount)
+
+	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	if !ok {
+		return ""
+	}
+
+	amount := new(big.Int).Div(sAmount, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil))
+	return fmt.Sprintf("%s('%s')", s.Asset.UnitName, amount.String())
+
 }

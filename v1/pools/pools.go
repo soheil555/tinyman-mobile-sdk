@@ -449,7 +449,7 @@ func (s *Pool) Convert(amount types.AssetAmount) (assetAmount types.AssetAmount)
 	return
 }
 
-func (s *Pool) FetchMintQuote(amountA types.AssetAmount, amountB types.AssetAmount, slippage float64) (quote MintQuote, err error) {
+func (s *Pool) FetchMintQuote(amountA *types.AssetAmount, amountB *types.AssetAmount, slippage float64) (quote MintQuote, err error) {
 
 	var amount1, amount2 types.AssetAmount
 	var liquidityAssetAmount uint64

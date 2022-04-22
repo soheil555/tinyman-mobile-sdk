@@ -11,75 +11,89 @@ import (
 	"tinyman-mobile-sdk/v1/optin"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
+	"github.com/algorand/go-algorand-sdk/client/v2/common"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 type TinymanClient struct {
-	Algod          *algod.Client
-	Indexer        *indexer.Client
-	ValidatorAppId uint64
-	AssetsCache    map[uint64]types.Asset
+	algod          *algod.Client
+	indexer        *indexer.Client
+	ValidatorAppId int
+	assetsCache    map[int]types.Asset
 	UserAddress    algoTypes.Address
 }
 
-func NewTinymanClient(algodClient *algod.Client, indexerClient *indexer.Client, validatorAppId uint64, userAddress algoTypes.Address) TinymanClient {
+func NewTinymanClient(algodClientURL string, indexerClientURL string, validatorAppId int, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+
+	headers := []*common.Header{
+		{
+			Key:   "User-Agent",
+			Value: "algosdk",
+		},
+	}
+
+	algodClient, err := algod.MakeClientWithHeaders(algodClientURL, "", headers)
+	if err != nil {
+		return
+	}
+
+	indexerClient, err := indexer.MakeClientWithHeaders(indexerClientURL, "", headers)
+	if err != nil {
+		return
+	}
 
 	return TinymanClient{
 		algodClient,
 		indexerClient,
 		validatorAppId,
-		map[uint64]types.Asset{},
+		map[int]types.Asset{},
 		userAddress,
-	}
+	}, nil
 }
 
-func NewTinymanTestnetClient(algodClient *algod.Client, indexerClient *indexer.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func NewTinymanTestnetClient(algodClientURL string, indexerClientURL string, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return NewTinymanClient(algodClient, indexerClient, constants.TESTNET_VALIDATOR_APP_ID, userAddress), nil
+	return NewTinymanClient(algodClientURL, indexerClientURL, constants.TESTNET_VALIDATOR_APP_ID, userAddress)
 
 }
 
-func NewTinymanMainnetClient(algodClient *algod.Client, indexerClient *indexer.Client, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
+func NewTinymanMainnetClient(algodClientURL string, indexerClientURL string, userAddress algoTypes.Address) (tinymanClient TinymanClient, err error) {
 
-	return NewTinymanClient(algodClient, indexerClient, constants.MAINNET_VALIDATOR_APP_ID, userAddress), nil
+	return NewTinymanClient(algodClientURL, indexerClientURL, constants.MAINNET_VALIDATOR_APP_ID, userAddress)
 
 }
 
 //TODO: implement later, cycle import error
-func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
-}
+// func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
+// }
 
-func (s *TinymanClient) FetchAsset(assetID uint64) (asset types.Asset, err error) {
+func (s *TinymanClient) FetchAsset(assetID int) (asset types.Asset, err error) {
 
-	if _, ok := s.AssetsCache[assetID]; !ok {
+	if _, ok := s.assetsCache[assetID]; !ok {
 
 		asset = types.Asset{Id: assetID}
-		err = asset.Fetch(s.Indexer)
+		err = asset.Fetch(s.indexer)
 
 		if err != nil {
 			return
 		}
 
-		s.AssetsCache[assetID] = asset
+		s.assetsCache[assetID] = asset
 
 	}
 
-	asset = s.AssetsCache[assetID]
+	asset = s.assetsCache[assetID]
 	return
 
 }
 
 func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait bool) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
 
-	var signedGroup []byte
+	signedGroup := transactionGroup.GetSignedGroup()
 
-	for _, txn := range transactionGroup.SignedTransactions {
-		signedGroup = append(signedGroup, txn...)
-	}
-
-	sendRawTransaction := s.Algod.SendRawTransaction(signedGroup)
+	sendRawTransaction := s.algod.SendRawTransaction(signedGroup)
 	Txid, err = sendRawTransaction.Do(context.Background())
 
 	if err != nil {
@@ -87,7 +101,7 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 	}
 
 	if wait {
-		return utils.WaitForConfirmation(s.Algod, Txid)
+		return utils.WaitForConfirmation(s.algod, Txid)
 	}
 
 	return
@@ -100,7 +114,7 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Addres
 		userAddress = s.UserAddress
 	}
 
-	suggestedParams, err := s.Algod.SuggestedParams().Do(context.Background())
+	suggestedParams, err := s.algod.SuggestedParams().Do(context.Background())
 	if err != nil {
 		return
 	}
@@ -117,7 +131,7 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID uint64, userAddres
 		userAddress = s.UserAddress
 	}
 
-	suggestedParams, err := s.Algod.SuggestedParams().Do(context.Background())
+	suggestedParams, err := s.algod.SuggestedParams().Do(context.Background())
 	if err != nil {
 		return
 	}
@@ -136,7 +150,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 		userAddress = s.UserAddress
 	}
 
-	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return
 	}
@@ -145,7 +159,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 	for _, a := range accountInfo.AppsLocalState {
 
-		if a.Id == s.ValidatorAppId {
+		if a.Id == uint64(s.ValidatorAppId) {
 			validatorApp = a
 		}
 
@@ -174,7 +188,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 		if bLen >= 9 && b[bLen-9] == byte('e') {
 
-			value := validatorAppState[key].Uint
+			value := int(validatorAppState[key].Uint)
 			var poolAddress string
 			poolAddress, err = algoTypes.EncodeAddress(b[:bLen-9])
 
@@ -188,7 +202,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress algoTypes.Address) (pools
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
 			var asset types.Asset
-			asset, err = s.FetchAsset(assetID)
+			asset, err = s.FetchAsset(int(assetID))
 			if err != nil {
 				return
 			}
@@ -213,13 +227,13 @@ func (s *TinymanClient) IsOptedIn(userAddress algoTypes.Address) (bool, error) {
 		userAddress = s.UserAddress
 	}
 
-	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}
 
 	for _, a := range accountInfo.AppsLocalState {
-		if a.Id == s.ValidatorAppId {
+		if a.Id == uint64(s.ValidatorAppId) {
 			return true, nil
 		}
 	}
@@ -227,19 +241,19 @@ func (s *TinymanClient) IsOptedIn(userAddress algoTypes.Address) (bool, error) {
 	return false, nil
 }
 
-func (s *TinymanClient) AssetIsOptedIn(assetID uint64, userAddress algoTypes.Address) (bool, error) {
+func (s *TinymanClient) AssetIsOptedIn(assetID int, userAddress algoTypes.Address) (bool, error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.UserAddress
 	}
 
-	_, accountInfo, err := s.Indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
+	_, accountInfo, err := s.indexer.LookupAccountByID(userAddress.String()).Do(context.Background())
 	if err != nil {
 		return false, err
 	}
 
 	for _, a := range accountInfo.Assets {
-		if a.AssetId == assetID {
+		if a.AssetId == uint64(assetID) {
 			return true, nil
 		}
 	}
