@@ -11,10 +11,12 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID, assetID int, assetAmount string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID, assetID int, assetAmount string, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
-	var senderAddress algoTypes.Address
-	copy(senderAddress[:], sender)
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	AssetAmount, ok := new(big.Int).SetString(assetAmount, 10)
 	if !ok {
@@ -40,7 +42,7 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
-	paymentTxn, err := future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -54,7 +56,7 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 		foreignAssets = []uint64{uint64(asset1ID), uint64(asset2ID), uint64(liquidityAssetID)}
 	}
 
-	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(uint64(validatorAppId), [][]byte{[]byte("redeem")}, []string{senderAddress.String()}, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(uint64(validatorAppId), [][]byte{[]byte("redeem")}, []string{sender.String()}, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -64,11 +66,11 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 
 	if assetID != 0 {
 
-		assetTransferTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), senderAddress.String(), AssetAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetID))
+		assetTransferTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), AssetAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetID))
 
 	} else {
 
-		assetTransferTxn, err = future.MakePaymentTxn(poolAddress.String(), senderAddress.String(), AssetAmount.Uint64(), nil, "", algoSuggestedParams)
+		assetTransferTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), AssetAmount.Uint64(), nil, "", algoSuggestedParams)
 
 	}
 
@@ -84,7 +86,11 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 		return
 	}
 
-	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	lsig := types.LogicSig{
+		Logic: poolLogicsig.Logic,
+	}
+
+	err = txnGroup.SignWithLogicsig(lsig)
 
 	return
 

@@ -11,7 +11,12 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID, assetInID int, assetInAmount, assetOutAmount string, swapType string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID, assetInID int, assetInAmount, assetOutAmount, swapType, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
@@ -40,9 +45,6 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		MinFee:           uint64(suggestedParams.MinFee),
 	}
 
-	var senderAddress algoTypes.Address
-	copy(senderAddress[:], sender)
-
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
 
 	swapTypes := map[string]string{
@@ -58,7 +60,7 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		assetOutID = asset1ID
 	}
 
-	paymentTxn, err := future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -72,7 +74,7 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		foreignAssets = []uint64{uint64(asset1ID), uint64(asset2ID), uint64(liquidityAssetID)}
 	}
 
-	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(uint64(validatorAppId), [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{senderAddress.String()}, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationNoOpTxn, err := future.MakeApplicationNoOpTx(uint64(validatorAppId), [][]byte{[]byte("swap"), []byte(swapTypes[swapType])}, []string{sender.String()}, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
@@ -81,9 +83,9 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 	var assetTransferInTxn algoTypes.Transaction
 
 	if assetInID != 0 {
-		assetTransferInTxn, err = future.MakeAssetTransferTxn(senderAddress.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetInID))
+		assetTransferInTxn, err = future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetInID))
 	} else {
-		assetTransferInTxn, err = future.MakePaymentTxn(senderAddress.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, "", algoSuggestedParams)
+		assetTransferInTxn, err = future.MakePaymentTxn(sender.String(), poolAddress.String(), AssetInAmount.Uint64(), nil, "", algoSuggestedParams)
 	}
 
 	if err != nil {
@@ -93,9 +95,9 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 	var assetTransferOutTxn algoTypes.Transaction
 
 	if assetOutID != 0 {
-		assetTransferOutTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), senderAddress.String(), AssetOutAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetOutID))
+		assetTransferOutTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), AssetOutAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetOutID))
 	} else {
-		assetTransferOutTxn, err = future.MakePaymentTxn(poolAddress.String(), senderAddress.String(), AssetOutAmount.Uint64(), nil, "", algoSuggestedParams)
+		assetTransferOutTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), AssetOutAmount.Uint64(), nil, "", algoSuggestedParams)
 	}
 
 	if err != nil {
@@ -110,8 +112,11 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		return
 	}
 
-	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	lsig := types.LogicSig{
+		Logic: poolLogicsig.Logic,
+	}
 
+	err = txnGroup.SignWithLogicsig(lsig)
 	return
 
 }
