@@ -23,7 +23,7 @@ func hex2Int(hexStr string) uint64 {
 
 }
 
-func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1UnitName, asset2UnitName string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
+func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1UnitName, asset2UnitName string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
 	var senderAddress algoTypes.Address
 	copy(senderAddress[:], sender)

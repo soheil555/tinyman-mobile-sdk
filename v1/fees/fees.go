@@ -11,7 +11,7 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, amount string, creator, sender []byte, suggestedParams types.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
+func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, amount string, creator, sender []byte, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
 	var senderAddress, creatorAddress algoTypes.Address
 

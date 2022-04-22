@@ -11,7 +11,7 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, asset1Amount, asset2Amount, liquidityAssetAmount string, sender []byte, suggestedParams types.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
+func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, asset1Amount, asset2Amount, liquidityAssetAmount string, sender []byte, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
 	var senderAddress algoTypes.Address
 	copy(senderAddress[:], sender)

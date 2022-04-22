@@ -108,10 +108,10 @@ func (s *TinymanClient) Submit(transactionGroup utils.TransactionGroup, wait boo
 
 }
 
-func (s *TinymanClient) PrepareAppOptinTransactions(userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *TinymanClient) PrepareAppOptinTransactions(userAddress []byte) (txnGroup *utils.TransactionGroup, err error) {
 
-	if userAddress.IsZero() {
-		userAddress = s.UserAddress
+	if len(userAddress) == 0 {
+		copy(userAddress, s.UserAddress[:])
 	}
 
 	suggestedParams, err := s.algod.SuggestedParams().Do(context.Background())
