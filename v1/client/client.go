@@ -97,6 +97,12 @@ func (s *TinymanClient) FetchAsset(assetID int) (asset *assets.Asset, err error)
 
 }
 
+func (s *TinymanClient) LookupAccountByID(address string) (validRound uint64, result models.Account, err error) {
+
+	return s.indexer.LookupAccountByID(address).Do(context.Background())
+
+}
+
 func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bool) (trxInfo *types.TrxInfo, err error) {
 
 	signedGroup := transactionGroup.GetSignedGroup()
