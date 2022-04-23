@@ -307,10 +307,10 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) (err error)
 
 }
 
-func (s *TransactionGroup) SignWithPrivateKey(address algoTypes.Address, privateKey ed25519.PrivateKey) (err error) {
+func (s *TransactionGroup) SignWithPrivateKey(address string, privateKey string) (err error) {
 
 	for i, txn := range s.transactions {
-		if txn.Sender == address {
+		if txn.Sender.String() == address {
 			_, stxBytes, err := crypto.SignTransaction([]byte(privateKey), txn)
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)

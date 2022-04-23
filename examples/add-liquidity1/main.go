@@ -1,15 +1,17 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"math/big"
 	"os"
-	"tinyman-mobile-sdk/types"
+	"strconv"
+	"tinyman-mobile-sdk/assets"
 	"tinyman-mobile-sdk/v1/client"
 	"tinyman-mobile-sdk/v1/pools"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
-	algoTypes "github.com/algorand/go-algorand-sdk/types"
 	"github.com/joho/godotenv"
 	"github.com/kr/pretty"
 )
@@ -49,7 +51,7 @@ func main() {
 	algodClientURL := "https://node.testnet.algoexplorerapi.io"
 	indexerClientURL := "https://algoindexer.testnet.algoexplorerapi.io"
 
-	client, err := client.NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAccount.Address)
+	client, err := client.NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAccount.Address.String())
 	// By default all subsequent operations are on behalf of userAccount
 
 	if err != nil {
@@ -72,7 +74,7 @@ func main() {
 
 	// Fetch the pool we will work with
 	//TODO: make pool from client
-	pool, err := pools.NewPool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
+	pool, err := pools.NewPool(client, TINYUSDC, ALGO, nil, true, 0)
 
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)
@@ -80,54 +82,82 @@ func main() {
 	}
 
 	// Get a quote for supplying 10.0 TinyUSDC
-	quote, err := pool.FetchMintQuote(TINYUSDC.Call("10000000"), types.AssetAmount{}, 0.01)
+	quote, err := pool.FetchMintQuote(TINYUSDC.Call("10000000"), nil, 0.01)
 	if err != nil {
 		fmt.Printf("error Fetching MintQuote: %s\n", err)
 		return
 	}
 
-	//TODO: in some places we use pointer but in some places, we don't. what to do
 	pretty.Println(quote)
 
 	// Check if we are happy with the quote...
-	//TODO: in python code quote.AmountsIn[ALGO] considered to be number
-	if quote.AmountsIn[ALGO].Amount < 1_000_000 {
+	amountsInStr, err := quote.GetAmountsInStr()
+	if err != nil {
+		fmt.Printf("error getting quote amountsIn: %s\n", amountsInStr)
+		return
+	}
+
+	amountsIn := make(map[int]string)
+	err = json.Unmarshal([]byte(amountsInStr), &amountsIn)
+
+	if err != nil {
+		fmt.Printf("error convert amountsInStr to map")
+		return
+	}
+
+	algoAmountsIn, _ := new(big.Int).SetString(amountsIn[ALGO.Id], 10)
+
+	if algoAmountsIn.Cmp(big.NewInt(1_000_000)) < 0 {
 
 		// Prepare the mint transactions from the quote and sign them
-		transactionGroup, err := pool.PrepareMintTransactionsFromQuote(quote, algoTypes.Address{})
+		transactionGroup, err := pool.PrepareMintTransactionsFromQuote(quote, "")
 		if err != nil {
 			fmt.Printf("error preparing mint transactions from quote: %s\n", err)
 			return
 		}
 
-		transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
-		_, _, err = client.Submit(transactionGroup, true)
+		transactionGroup.SignWithPrivateKey(userAccount.Address.String(), string(userAccount.PrivateKey))
+		_, err = client.Submit(transactionGroup, true)
 		if err != nil {
 			fmt.Printf("error submit transactions 1: %s\n", err)
 			return
 		}
 
 		// Check if any excess liquidity asset remaining after the mint
-		excess, err := pool.FetchExcessAmounts(algoTypes.Address{})
+		excessStr, err := pool.FetchExcessAmounts("")
 		if err != nil {
 			fmt.Printf("error fetching excess amounts: %s\n", err)
 			return
 		}
 
-		if amount, ok := excess[pool.LiquidityAsset]; ok {
+		excess := make(map[int]string)
+		err = json.Unmarshal([]byte(excessStr), &excess)
 
-			fmt.Printf("Excess: %v\n", amount.Amount)
+		if err != nil {
+			fmt.Printf("error convert excessStr to map")
+			return
+		}
 
-			if amount.Amount > 1_000 {
+		if amount, ok := excess[pool.LiquidityAsset.Id]; ok {
 
-				transactionGroup, err := pool.PrepareRedeemTransactions(amount, algoTypes.Address{})
+			fmt.Printf("Excess: %v\n", amount)
+			amountUint, _ := new(big.Int).SetString(amount, 10)
+
+			if amountUint.Cmp(big.NewInt(1_000)) > 0 {
+
+				assetAmount := &assets.AssetAmount{
+					Asset:  pool.LiquidityAsset,
+					Amount: amount,
+				}
+
+				transactionGroup, err := pool.PrepareRedeemTransactions(assetAmount, "")
 				if err != nil {
 					fmt.Printf("error preparing redeem transactions: %s\n", err)
 					return
 				}
 
-				transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
-				_, _, err = client.Submit(transactionGroup, true)
+				transactionGroup.SignWithPrivateKey(userAccount.Address.String(), string(userAccount.PrivateKey))
+				_, err = client.Submit(transactionGroup, true)
 				if err != nil {
 					fmt.Printf("error submit transactions 2: %s\n", err)
 					return
@@ -139,14 +169,24 @@ func main() {
 
 	}
 
-	info, share, err := pool.FetchPoolPosition(algoTypes.Address{})
+	infoStr, err := pool.FetchPoolPosition("")
 	if err != nil {
 		fmt.Printf("error fetching pool position: %s\n", err)
 		return
 	}
 
-	fmt.Printf("Pool Tokens: %v\n", info[pool.LiquidityAsset])
-	fmt.Printf("Assets: %v, %v\n", info[TINYUSDC], info[ALGO])
-	fmt.Printf("share of pool: %.3f\n", share*100)
+	info := make(map[string]string)
+	err = json.Unmarshal([]byte(infoStr), &info)
+	if err != nil {
+		fmt.Printf("error convert infoStr to map")
+		return
+	}
+
+	share, _ := new(big.Float).SetString(info["share"])
+	shareFloat, _ := share.Float64()
+
+	fmt.Printf("Pool Tokens: %v\n", info[strconv.Itoa(pool.LiquidityAsset.Id)])
+	fmt.Printf("Assets: %v, %v\n", info[strconv.Itoa(TINYUSDC.Id)], info[strconv.Itoa(ALGO.Id)])
+	fmt.Printf("share of pool: %.3f\n", shareFloat*100)
 
 }
