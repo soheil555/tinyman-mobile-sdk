@@ -1,8 +1,8 @@
 package optout
 
 import (
-	"tinyman-mobile-sdk/utils"
-	"tinyman-mobile-sdk/v1/client"
+	"github.com/soheil555/tinyman-mobile-sdk/utils"
+	"github.com/soheil555/tinyman-mobile-sdk/v1/client"
 
 	"github.com/algorand/go-algorand-sdk/future"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"

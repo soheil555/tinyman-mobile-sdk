@@ -4,8 +4,9 @@ import (
 	"embed"
 	"encoding/json"
 	"sort"
-	"tinyman-mobile-sdk/types"
-	"tinyman-mobile-sdk/utils"
+
+	"github.com/soheil555/tinyman-mobile-sdk/types"
+	"github.com/soheil555/tinyman-mobile-sdk/utils"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
 )

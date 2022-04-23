@@ -1,4 +1,4 @@
-module tinyman-mobile-sdk
+module github.com/soheil555/tinyman-mobile-sdk
 
 go 1.18
 

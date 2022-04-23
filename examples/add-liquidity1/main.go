@@ -6,9 +6,10 @@ import (
 	"math/big"
 	"os"
 	"strconv"
-	"tinyman-mobile-sdk/assets"
-	"tinyman-mobile-sdk/v1/client"
-	"tinyman-mobile-sdk/v1/pools"
+
+	"github.com/soheil555/tinyman-mobile-sdk/assets"
+	"github.com/soheil555/tinyman-mobile-sdk/v1/client"
+	"github.com/soheil555/tinyman-mobile-sdk/v1/pools"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"

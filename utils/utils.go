@@ -8,7 +8,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
-	"tinyman-mobile-sdk/types"
+
+	"github.com/soheil555/tinyman-mobile-sdk/types"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"

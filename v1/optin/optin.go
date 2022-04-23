@@ -1,8 +1,8 @@
 package optin
 
 import (
-	"tinyman-mobile-sdk/types"
-	"tinyman-mobile-sdk/utils"
+	"github.com/soheil555/tinyman-mobile-sdk/types"
+	"github.com/soheil555/tinyman-mobile-sdk/utils"
 
 	"github.com/algorand/go-algorand-sdk/future"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"

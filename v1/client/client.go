@@ -7,11 +7,12 @@ import (
 	"encoding/json"
 	"math/big"
 	"reflect"
-	"tinyman-mobile-sdk/assets"
-	"tinyman-mobile-sdk/types"
-	"tinyman-mobile-sdk/utils"
-	"tinyman-mobile-sdk/v1/constants"
-	"tinyman-mobile-sdk/v1/optin"
+
+	"github.com/soheil555/tinyman-mobile-sdk/assets"
+	"github.com/soheil555/tinyman-mobile-sdk/types"
+	"github.com/soheil555/tinyman-mobile-sdk/utils"
+	"github.com/soheil555/tinyman-mobile-sdk/v1/constants"
+	"github.com/soheil555/tinyman-mobile-sdk/v1/optin"
 
 	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/client/v2/common"
