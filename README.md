@@ -4,11 +4,16 @@ Tinyman go SDK compatible with go-mobile package.
 
 
 
-# Status
-
-README is under construction. Please come back later.
 
 
+# Go-Mobile Compatibility
+
+Due to go-mobile type restrictions for exported symbols:
+
+- Numeric values that aren't likely to have a value more than 64 bit have an`int` type.
+- Numeric Values like Balance that may have a large value have a `string` type and during calculations, they will be converted to `*big.Int` or `*big.Float` type.
+- For methods that return a map( like `FetchExcessAmounts` method ), there is a method that ends with `Str` ( like `FetchExcessAmountsStr` ) that return JSON string of the map.
+- Struct fields that are not supported by go-mobile are unexported and there is a getter method for each one of them in the form of `GetFieldName`
 
 
 
@@ -121,6 +126,26 @@ pretty.Println(quote)
 
 
 
+
+## Running Examples
+
+1. inside project base directory
+
+   ```bash
+   cp .env.example .env
+   ```
+
+2. you need to open `.env` file and set the **MNEMONIC** variable
+
+3. change directory to examples/[example-name]
+
+4. run the following command to start running the example
+
+   ```bash
+   go run main.go
+   ```
+
+   
 
 # Conventions
 
