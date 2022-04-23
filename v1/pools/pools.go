@@ -36,9 +36,9 @@ type PoolInfo struct {
 	Asset2Reserves                  string
 	IssuedLiquidity                 string
 	UnclaimedProtocolFees           int
-	OutstandingAsset1Amount         string
-	OutstandingAsset2Amount         string
-	OutstandingLiquidityAssetAmount string
+	OutstandingAsset1Amount         int
+	OutstandingAsset2Amount         int
+	OutstandingLiquidityAssetAmount int
 	ValidatorAppId                  int
 	AlgoBalance                     string
 	Round                           int
@@ -124,9 +124,6 @@ func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo,
 	Asset1Reserves := big.NewInt(int64(asset1Reserves))
 	Asset2Reserves := big.NewInt(int64(asset2Reserves))
 	IssuedLiquidity := big.NewInt(int64(issuedLiquidity))
-	OutstandingAsset1Amount := big.NewInt(int64(outstandingAsset1Amount))
-	OutstandingAsset2Amount := big.NewInt(int64(outstandingAsset2Amount))
-	OutstandingLiquidityAssetAmount := big.NewInt(int64(outstandingLiquidityAssetAmount))
 	AccountAmount := big.NewInt(int64(accountInfo.Amount))
 
 	poolInfo = &PoolInfo{
@@ -139,9 +136,9 @@ func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo,
 		Asset2Reserves:                  Asset2Reserves.String(),
 		IssuedLiquidity:                 IssuedLiquidity.String(),
 		UnclaimedProtocolFees:           unclaimedProtocolFees,
-		OutstandingAsset1Amount:         OutstandingAsset1Amount.String(),
-		OutstandingAsset2Amount:         OutstandingAsset2Amount.String(),
-		OutstandingLiquidityAssetAmount: OutstandingLiquidityAssetAmount.String(),
+		OutstandingAsset1Amount:         outstandingAsset1Amount,
+		OutstandingAsset2Amount:         outstandingAsset2Amount,
+		OutstandingLiquidityAssetAmount: outstandingLiquidityAssetAmount,
 		ValidatorAppId:                  validatorAppID,
 		AlgoBalance:                     AccountAmount.String(),
 		Round:                           int(accountInfo.Round),
@@ -300,9 +297,9 @@ type Pool struct {
 	Asset2Reserves                  string
 	IssuedLiquidity                 string
 	UnclaimedProtocolFees           int
-	OutstandingAsset1Amount         string
-	OutstandingAsset2Amount         string
-	OutstandingLiquidityAssetAmount string
+	OutstandingAsset1Amount         int
+	OutstandingAsset2Amount         int
+	OutstandingLiquidityAssetAmount int
 	LastRefreshedRound              int
 	AlgoBalance                     string
 	MinBalance                      int
@@ -411,10 +408,9 @@ func (s *Pool) UpdateFromInfo(info *PoolInfo) {
 
 		algoBalance, _ := new(big.Int).SetString(s.AlgoBalance, 10)
 		minBalance := big.NewInt(int64(s.MinBalance))
-		outstandingAsset2Amount, _ := new(big.Int).SetString(s.OutstandingAsset2Amount, 10)
 
 		tmp := new(big.Int).Sub(algoBalance, minBalance)
-		tmp.Sub(tmp, outstandingAsset2Amount)
+		tmp.Sub(tmp, big.NewInt(int64(s.OutstandingAsset2Amount)))
 
 		s.Asset2Reserves = tmp.String()
 	}
@@ -670,25 +666,32 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn *assets.AssetAmount, slippage f
 		outputSupply = s.Asset1Reserves
 	}
 
-	if inputSupply == 0 || outputSupply == 0 {
+	InputSupply, _ := new(big.Int).SetString(inputSupply, 10)
+	OutputSupply, _ := new(big.Int).SetString(outputSupply, 10)
+
+	if InputSupply.Cmp(big.NewInt(0)) == 0 || OutputSupply.Cmp(big.NewInt(0)) == 0 {
 		err = fmt.Errorf("pool has no liquidity")
 		return
 	}
 
-	k := new(big.Int).Mul(big.NewInt(int64(inputSupply)), big.NewInt(int64(outputSupply)))
-	assetInAmountMinusFee := assetInAmount * 997 / 1000
-	swapFees := assetInAmount - assetInAmountMinusFee
+	k := new(big.Int).Mul(InputSupply, OutputSupply)
+	AssetInAmount, _ := new(big.Int).SetString(assetInAmount, 10)
 
-	tmp := new(big.Int).Div(k, big.NewInt(int64(inputSupply+assetInAmountMinusFee)))
-	assetOutAmount := new(big.Int).Sub(big.NewInt(int64(outputSupply)), tmp)
+	tmp := new(big.Int).Mul(AssetInAmount, big.NewInt(997))
+	assetInAmountMinusFee := new(big.Int).Div(tmp, big.NewInt(1000))
+	swapFees := new(big.Int).Sub(AssetInAmount, assetInAmountMinusFee)
 
-	amountOut := assets.AssetAmount{Asset: assetOut, Amount: assetOutAmount.Uint64()}
+	tmp = new(big.Int).Add(InputSupply, assetInAmountMinusFee)
+	tmp = new(big.Int).Div(k, tmp)
+	assetOutAmount := new(big.Int).Sub(OutputSupply, tmp)
 
-	quote = SwapQuote{
+	amountOut := assets.AssetAmount{Asset: *assetOut, Amount: assetOutAmount.String()}
+
+	quote = &SwapQuote{
 		SwapType:  "fixed-input",
 		AmountIn:  amountIn,
-		AmountOut: amountOut,
-		SwapFees:  assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFees},
+		AmountOut: &amountOut,
+		SwapFees:  &assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFees.String()},
 		Slippage:  slippage,
 	}
 
@@ -696,14 +699,14 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn *assets.AssetAmount, slippage f
 
 }
 
-func (s *Pool) FetchFixedInputSwapQuoteWithDefaultSlippage(amountIn assets.AssetAmount) (quote SwapQuote, err error) {
+func (s *Pool) FetchFixedInputSwapQuoteWithDefaultSlippage(amountIn *assets.AssetAmount) (quote *SwapQuote, err error) {
 	return s.FetchFixedInputSwapQuote(amountIn, 0.05)
 }
 
-func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage float64) (quote SwapQuote, err error) {
+func (s *Pool) FetchFixedOutputSwapQuote(amountOut *assets.AssetAmount, slippage float64) (quote *SwapQuote, err error) {
 
-	var assetIn assets.Asset
-	var inputSupply, outputSupply uint64
+	var assetIn *assets.Asset
+	var inputSupply, outputSupply string
 
 	assetOut := amountOut.Asset
 	assetOutAmount := amountOut.Amount
@@ -713,7 +716,7 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage 
 		return
 	}
 
-	if assetOut == s.Asset1 {
+	if assetOut == *s.Asset1 {
 		assetIn = s.Asset2
 		inputSupply = s.Asset2Reserves
 		outputSupply = s.Asset1Reserves
@@ -723,23 +726,27 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage 
 		outputSupply = s.Asset2Reserves
 	}
 
-	k := new(big.Int).Mul(big.NewInt(int64(inputSupply)), big.NewInt(int64(outputSupply)))
+	InputSupply, _ := new(big.Int).SetString(inputSupply, 10)
+	OutputSupply, _ := new(big.Int).SetString(outputSupply, 10)
+	AssetOutAmount, _ := new(big.Int).SetString(assetOutAmount, 10)
 
-	tmp := new(big.Int).Div(k, big.NewInt(int64(outputSupply-assetOutAmount)))
-	calculatedAmountInWithoutFee := new(big.Int).Sub(tmp, big.NewInt(int64(inputSupply)))
+	k := new(big.Int).Mul(InputSupply, OutputSupply)
+
+	tmp := new(big.Int).Div(k, new(big.Int).Sub(OutputSupply, AssetOutAmount))
+	calculatedAmountInWithoutFee := new(big.Int).Sub(tmp, InputSupply)
 
 	assetInAmount := new(big.Int).Mul(calculatedAmountInWithoutFee, big.NewInt(1000))
 	assetInAmount.Div(assetInAmount, big.NewInt(997))
 
 	swapFees := new(big.Int).Sub(assetInAmount, calculatedAmountInWithoutFee)
 
-	amountIn := assets.AssetAmount{Asset: assetIn, Amount: assetInAmount.Uint64()}
+	amountIn := assets.AssetAmount{Asset: *assetIn, Amount: assetInAmount.String()}
 
-	quote = SwapQuote{
+	quote = &SwapQuote{
 		SwapType:  "fixed-output",
-		AmountIn:  amountIn,
+		AmountIn:  &amountIn,
 		AmountOut: amountOut,
-		SwapFees:  assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFees.Uint64()},
+		SwapFees:  &assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFees.String()},
 		Slippage:  slippage,
 	}
 
@@ -747,19 +754,35 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut assets.AssetAmount, slippage 
 
 }
 
-func (s *Pool) FetchFixedOutputSwapQuoteWithDefaultSlippage(amountOut assets.AssetAmount) (quote SwapQuote, err error) {
+func (s *Pool) FetchFixedOutputSwapQuoteWithDefaultSlippage(amountOut *assets.AssetAmount) (quote *SwapQuote, err error) {
 	return s.FetchFixedOutputSwapQuote(amountOut, 0.05)
 }
 
-func (s *Pool) PrepareSwapTransactions(amountIn assets.AssetAmount, amountOut assets.AssetAmount, swapType string, swapperAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareSwapTransactions(amountIn *assets.AssetAmount, amountOut *assets.AssetAmount, swapType string, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if swapperAddress.IsZero() {
-		swapperAddress = s.Client.UserAddress
+	if len(swapperAddress) == 0 {
+		swapperAddress = s.Client.UserAddress.String()
 	}
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	swapper, err := algoTypes.DecodeAddress(swapperAddress)
 	if err != nil {
 		return
+	}
+
+	algoSuggestedParams, err := s.Client.SuggestedParams()
+	if err != nil {
+		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = swap.PrepareSwapTransactions(
@@ -771,7 +794,7 @@ func (s *Pool) PrepareSwapTransactions(amountIn assets.AssetAmount, amountOut as
 		amountIn.Amount,
 		amountOut.Amount,
 		swapType,
-		swapperAddress,
+		swapper.String(),
 		suggestedParams,
 	)
 
@@ -779,7 +802,13 @@ func (s *Pool) PrepareSwapTransactions(amountIn assets.AssetAmount, amountOut as
 
 }
 
-func (s *Pool) PrepareSwapTransactionsFromQuote(quote SwapQuote, swapperAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareSwapTransactionsFromQuote(quote *SwapQuote, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
+
+	swapper, err := algoTypes.DecodeAddress(swapperAddress)
+	if err != nil {
+		return
+	}
+
 	amountIn, err := quote.AmountInWithSlippage()
 
 	if err != nil {
@@ -792,19 +821,35 @@ func (s *Pool) PrepareSwapTransactionsFromQuote(quote SwapQuote, swapperAddress 
 		return
 	}
 
-	return s.PrepareSwapTransactions(amountIn, amountOut, quote.SwapType, swapperAddress)
+	return s.PrepareSwapTransactions(amountIn, amountOut, quote.SwapType, swapper.String())
 
 }
 
-func (s *Pool) PrepareBootstrapTransactions(poolerAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareBootstrapTransactions(poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if poolerAddress.IsZero() {
-		poolerAddress = s.Client.UserAddress
+	if len(poolerAddress) == 0 {
+		poolerAddress = s.Client.UserAddress.String()
 	}
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	pooler, err := algoTypes.DecodeAddress(poolerAddress)
 	if err != nil {
 		return
+	}
+
+	algoSuggestedParams, err := s.Client.SuggestedParams()
+	if err != nil {
+		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = bootstrap.PrepareBootstrapTransactions(s.ValidatorAppId,
@@ -812,7 +857,7 @@ func (s *Pool) PrepareBootstrapTransactions(poolerAddress algoTypes.Address) (tx
 		s.Asset2.Id,
 		s.Asset1.UnitName,
 		s.Asset2.UnitName,
-		poolerAddress,
+		pooler.String(),
 		suggestedParams)
 
 	return
@@ -820,10 +865,15 @@ func (s *Pool) PrepareBootstrapTransactions(poolerAddress algoTypes.Address) (tx
 }
 
 //TODO: type dic[Asset] is dict[Asset,AssetAmount] in python code
-func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetAmount, liquidityAssetAmount assets.AssetAmount, poolerAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetAmount, liquidityAssetAmount *assets.AssetAmount, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if poolerAddress.IsZero() {
-		poolerAddress = s.Client.UserAddress
+	if len(poolerAddress) == 0 {
+		poolerAddress = s.Client.UserAddress.String()
+	}
+
+	pooler, err := algoTypes.DecodeAddress(poolerAddress)
+	if err != nil {
+		return
 	}
 
 	asset1Amount := amountsIn[s.Asset1]
@@ -931,20 +981,31 @@ func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddre
 
 }
 
-func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGroup utils.TransactionGroup, err error) {
 
 	if userAddress.IsZero() {
 		userAddress = s.Client.UserAddress
 	}
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	algoSuggestedParams, err := s.Client.SuggestedParams()
 	if err != nil {
 		return
 	}
 
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
+	}
+
 	txnGroup, err = optin.PrepareAssetOptinTransactions(
 		s.LiquidityAsset.Id,
-		userAddress,
+		swapp,
 		suggestedParams,
 	)
 
