@@ -125,17 +125,9 @@ func main() {
 		}
 
 		// Check if any excess liquidity asset remaining after the mint
-		excessStr, err := pool.FetchExcessAmounts("")
+		excess, err := pool.FetchExcessAmounts("")
 		if err != nil {
 			fmt.Printf("error fetching excess amounts: %s\n", err)
-			return
-		}
-
-		excess := make(map[int]string)
-		err = json.Unmarshal([]byte(excessStr), &excess)
-
-		if err != nil {
-			fmt.Printf("error convert excessStr to map")
 			return
 		}
 
@@ -170,16 +162,9 @@ func main() {
 
 	}
 
-	infoStr, err := pool.FetchPoolPosition("")
+	info, err := pool.FetchPoolPosition("")
 	if err != nil {
 		fmt.Printf("error fetching pool position: %s\n", err)
-		return
-	}
-
-	info := make(map[string]string)
-	err = json.Unmarshal([]byte(infoStr), &info)
-	if err != nil {
-		fmt.Printf("error convert infoStr to map")
 		return
 	}
 

@@ -264,6 +264,12 @@ func (s *MintQuote) GetAmountsInStr() (string, error) {
 
 }
 
+func (s *MintQuote) GetAmountsIn() map[int]string {
+
+	return s.amountsIn
+
+}
+
 //TODO: in python code it return int
 func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount *assets.AssetAmount, err error) {
 	assetAmount, err = s.LiquidityAssetAmount.Sub(s.LiquidityAssetAmount.Mul(s.Slippage))
@@ -285,6 +291,12 @@ func (s *BurnQuote) GetAmountsOutStr() (amountsOutStr string, err error) {
 
 	amountsOutStr = string(amountsOutBytes)
 	return
+
+}
+
+func (s *BurnQuote) GetAmountsOut() map[int]string {
+
+	return s.amountsOut
 
 }
 
@@ -797,7 +809,7 @@ func (s *Pool) FetchFixedOutputSwapQuoteWithDefaultSlippage(amountOut *assets.As
 func (s *Pool) PrepareSwapTransactions(amountIn *assets.AssetAmount, amountOut *assets.AssetAmount, swapType string, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(swapperAddress) == 0 {
-		swapperAddress = s.Client.UserAddress.String()
+		swapperAddress = s.Client.UserAddress
 	}
 
 	swapper, err := algoTypes.DecodeAddress(swapperAddress)
@@ -864,7 +876,7 @@ func (s *Pool) PrepareSwapTransactionsFromQuote(quote *SwapQuote, swapperAddress
 func (s *Pool) PrepareBootstrapTransactions(poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(poolerAddress) == 0 {
-		poolerAddress = s.Client.UserAddress.String()
+		poolerAddress = s.Client.UserAddress
 	}
 
 	pooler, err := algoTypes.DecodeAddress(poolerAddress)
@@ -910,7 +922,7 @@ func (s *Pool) PrepareMintTransactions(amountsInStr string, liquidityAssetAmount
 	}
 
 	if len(poolerAddress) == 0 {
-		poolerAddress = s.Client.UserAddress.String()
+		poolerAddress = s.Client.UserAddress
 	}
 
 	pooler, err := algoTypes.DecodeAddress(poolerAddress)
@@ -977,7 +989,7 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount *assets.AssetAmount,
 	}
 
 	if len(poolerAddress) == 0 {
-		poolerAddress = s.Client.UserAddress.String()
+		poolerAddress = s.Client.UserAddress
 	}
 
 	pooler, err := algoTypes.DecodeAddress(poolerAddress)
@@ -1039,7 +1051,7 @@ func (s *Pool) PrepareBurnTransactionsFromQuote(quote *BurnQuote, poolerAddress 
 func (s *Pool) PrepareRedeemTransactions(amountOut *assets.AssetAmount, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = s.Client.UserAddress.String()
+		userAddress = s.Client.UserAddress
 	}
 
 	user, err := algoTypes.DecodeAddress(userAddress)
@@ -1081,7 +1093,7 @@ func (s *Pool) PrepareRedeemTransactions(amountOut *assets.AssetAmount, userAddr
 func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = s.Client.UserAddress.String()
+		userAddress = s.Client.UserAddress
 	}
 
 	user, err := algoTypes.DecodeAddress(userAddress)
@@ -1118,7 +1130,7 @@ func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGr
 func (s *Pool) PrepareRedeemFeesTransactions(amount, creatorAddress, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = s.Client.UserAddress.String()
+		userAddress = s.Client.UserAddress
 	}
 
 	user, err := algoTypes.DecodeAddress(userAddress)
@@ -1187,10 +1199,10 @@ func (s *Pool) GetMinimumBalance() int {
 	return total
 }
 
-func (s *Pool) FetchExcessAmounts(userAddress string) (excessAmountsStr string, err error) {
+func (s *Pool) FetchExcessAmounts(userAddress string) (excessAmounts map[int]string, err error) {
 
 	if len(userAddress) == 0 {
-		userAddress = s.Client.UserAddress.String()
+		userAddress = s.Client.UserAddress
 	}
 
 	user, err := algoTypes.DecodeAddress(userAddress)
@@ -1212,25 +1224,34 @@ func (s *Pool) FetchExcessAmounts(userAddress string) (excessAmountsStr string, 
 	json.Unmarshal([]byte(fetchedExcessAmountsStr), &fetchedExcessAmounts)
 
 	if val, ok := fetchedExcessAmounts[address]; ok {
-
-		var excessAmountsBytes []byte
-		excessAmountsBytes, err = json.Marshal(val)
-		if err != nil {
-			return
-		}
-		excessAmountsStr = string(excessAmountsBytes)
-		return
-
+		return val, nil
 	} else {
 		return
 	}
 
 }
 
-func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPositionStr string, err error) {
+func (s *Pool) FetchExcessAmountsStr(userAddress string) (excessAmountsStr string, err error) {
+
+	excessAmounts, err := s.FetchExcessAmounts(userAddress)
+	if err != nil {
+		return
+	}
+
+	var excessAmountsBytes []byte
+	excessAmountsBytes, err = json.Marshal(excessAmounts)
+	if err != nil {
+		return
+	}
+	excessAmountsStr = string(excessAmountsBytes)
+	return
+
+}
+
+func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPosition map[string]string, err error) {
 
 	if len(poolerAddress) == 0 {
-		poolerAddress = s.Client.UserAddress.String()
+		poolerAddress = s.Client.UserAddress
 	}
 
 	pooler, err := algoTypes.DecodeAddress(poolerAddress)
@@ -1267,22 +1288,23 @@ func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPositionStr string, 
 
 	share := new(big.Float).Quo(LiquidityAssetAmount, IssuedLiquidity)
 
-	amountsOut := make(map[int]string)
-	amountsOutStr, err := quote.GetAmountsOutStr()
-	if err != nil {
-		return
-	}
-
-	err = json.Unmarshal([]byte(amountsOutStr), &amountsOut)
-	if err != nil {
-		return
-	}
-
-	poolPosition := map[string]string{
+	amountsOut := quote.GetAmountsOut()
+	poolPosition = map[string]string{
 		strconv.Itoa(s.Asset1.Id):         amountsOut[s.Asset1.Id],
 		strconv.Itoa(s.Asset2.Id):         amountsOut[s.Asset2.Id],
 		strconv.Itoa(s.LiquidityAsset.Id): quote.LiquidityAssetAmount.Amount,
 		"share":                           share.String(),
+	}
+
+	return
+
+}
+
+func (s *Pool) FetchPoolPositionStr(poolerAddress string) (poolPositionStr string, err error) {
+
+	poolPosition, err := s.FetchPoolPosition(poolerAddress)
+	if err != nil {
+		return
 	}
 
 	poolPositionBytes, err := json.Marshal(poolPosition)
@@ -1295,7 +1317,7 @@ func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPositionStr string, 
 
 }
 
-func (s *Pool) FetchState() (validatorAppStateStr string, err error) {
+func (s *Pool) FetchState() (validatorAppState map[string]models.TealValue, err error) {
 
 	address, err := s.Address()
 	if err != nil {
@@ -1314,10 +1336,21 @@ func (s *Pool) FetchState() (validatorAppStateStr string, err error) {
 	}
 
 	// validatorAppID := accountInfo.AppsLocalState[0].Id
-	validatorAppState := make(map[string]models.TealValue)
+	validatorAppState = make(map[string]models.TealValue)
 
 	for _, x := range accountInfo.AppsLocalState[0].KeyValue {
 		validatorAppState[x.Key] = x.Value
+	}
+
+	return
+
+}
+
+func (s *Pool) FetchStateStr() (validatorAppStateStr string, err error) {
+
+	validatorAppState, err := s.FetchState()
+	if err != nil {
+		return
 	}
 
 	validatorAppStateBytes, err := json.Marshal(validatorAppState)
@@ -1326,7 +1359,6 @@ func (s *Pool) FetchState() (validatorAppStateStr string, err error) {
 	}
 
 	validatorAppStateStr = string(validatorAppStateBytes)
-
 	return
 
 }

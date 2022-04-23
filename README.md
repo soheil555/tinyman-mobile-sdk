@@ -1,6 +1,6 @@
 # Tinyman Mobile SDK
 
-Tinyman Mobile SDK
+Tinyman go SDK compatible with go-mobile package.
 
 
 
