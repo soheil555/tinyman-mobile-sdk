@@ -198,7 +198,7 @@ func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress s
 
 }
 
-func (s *TinymanClient) FetchExcessAmounts(userAddress string) (excessAmounts string, err error) {
+func (s *TinymanClient) FetchExcessAmounts(userAddress string) (excessAmountsStr string, err error) {
 
 	pools := make(map[string]map[int]string)
 
@@ -282,7 +282,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress string) (excessAmounts st
 	if err != nil {
 		return
 	}
-	excessAmounts = string(excessAmountsBytes)
+	excessAmountsStr = string(excessAmountsBytes)
 
 	return
 

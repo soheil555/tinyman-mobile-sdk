@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"reflect"
+	"strconv"
 	"tinyman-mobile-sdk/assets"
 	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
@@ -245,9 +246,16 @@ func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
 
 //TODO: in python code AmountsIn is dict[AssetAmount]
 type MintQuote struct {
-	amountsIn            map[assets.Asset]assets.AssetAmount
+	amountsIn            map[int]assets.AssetAmount
 	LiquidityAssetAmount *assets.AssetAmount
 	Slippage             float64
+}
+
+func (s *MintQuote) GetAmountsInStr() (string, error) {
+
+	amountsIn, err := json.Marshal(s.amountsIn)
+	return string(amountsIn), err
+
 }
 
 //TODO: in python code it return int
@@ -257,9 +265,21 @@ func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount *assets.Asse
 }
 
 type BurnQuote struct {
-	amountsOut           map[*assets.Asset]*assets.AssetAmount
+	amountsOut           map[int]string
 	LiquidityAssetAmount *assets.AssetAmount
 	Slippage             float64
+}
+
+func (s *BurnQuote) GetAmountsOutStr() (amountsOutStr string, err error) {
+
+	amountsOutBytes, err := json.Marshal(s.amountsOut)
+	if err != nil {
+		return
+	}
+
+	amountsOutStr = string(amountsOutBytes)
+	return
+
 }
 
 func (s *BurnQuote) AmountsOutWithSlippage() (amountsOutWithSlippage string, err error) {
@@ -274,7 +294,7 @@ func (s *BurnQuote) AmountsOutWithSlippage() (amountsOutWithSlippage string, err
 			return
 		}
 
-		out[k.Id] = amountOutWithSlippage.Amount
+		out[k] = amountOutWithSlippage.Amount
 	}
 
 	amountsOutWithSlippageBytes, err := json.Marshal(out)
@@ -865,7 +885,13 @@ func (s *Pool) PrepareBootstrapTransactions(poolerAddress string) (txnGroup *uti
 }
 
 //TODO: type dic[Asset] is dict[Asset,AssetAmount] in python code
-func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetAmount, liquidityAssetAmount *assets.AssetAmount, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
+func (s *Pool) PrepareMintTransactions(amountsInStr string, liquidityAssetAmount *assets.AssetAmount, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
+
+	amountsIn := make(map[int]assets.AssetAmount)
+	err = json.Unmarshal([]byte(amountsInStr), &amountsIn)
+	if err != nil {
+		return
+	}
 
 	if len(poolerAddress) == 0 {
 		poolerAddress = s.Client.UserAddress.String()
@@ -876,12 +902,23 @@ func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetA
 		return
 	}
 
-	asset1Amount := amountsIn[s.Asset1]
-	asset2Amount := amountsIn[s.Asset2]
+	asset1Amount := amountsIn[s.Asset1.Id]
+	asset2Amount := amountsIn[s.Asset2.Id]
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	algoSuggestedParams, err := s.Client.SuggestedParams()
 	if err != nil {
 		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = mint.PrepareMintTransactions(s.ValidatorAppId,
@@ -891,7 +928,7 @@ func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetA
 		asset1Amount.Amount,
 		asset2Amount.Amount,
 		liquidityAssetAmount.Amount,
-		poolerAddress,
+		pooler.String(),
 		suggestedParams,
 	)
 
@@ -899,28 +936,56 @@ func (s *Pool) PrepareMintTransactions(amountsIn map[assets.Asset]*assets.AssetA
 
 }
 
-func (s *Pool) PrepareMintTransactionsFromQuote(quote MintQuote, poolerAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareMintTransactionsFromQuote(quote *MintQuote, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	liquidityAssetAmount, err := quote.LiquidityAssetAmountWithSlippage()
 	if err != nil {
 		return
 	}
 
-	return s.PrepareMintTransactions(quote.AmountsIn, liquidityAssetAmount, poolerAddress)
-}
-
-func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount assets.AssetAmount, amountsOut map[assets.Asset]assets.AssetAmount, poolerAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
-
-	if poolerAddress.IsZero() {
-		poolerAddress = s.Client.UserAddress
-	}
-
-	asset1Amount := amountsOut[s.Asset1]
-	asset2Amount := amountsOut[s.Asset2]
-
-	suggestedParams, err := s.Client.SuggestedParams()
+	amountsIn, err := quote.GetAmountsInStr()
 	if err != nil {
 		return
+	}
+
+	return s.PrepareMintTransactions(amountsIn, liquidityAssetAmount, poolerAddress)
+}
+
+func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount *assets.AssetAmount, amountsOutStr string, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
+
+	amountsOut := make(map[assets.Asset]assets.AssetAmount)
+	err = json.Unmarshal([]byte(amountsOutStr), amountsOut)
+
+	if err != nil {
+		return
+	}
+
+	if len(poolerAddress) == 0 {
+		poolerAddress = s.Client.UserAddress.String()
+	}
+
+	pooler, err := algoTypes.DecodeAddress(poolerAddress)
+	if err != nil {
+		return
+	}
+
+	asset1Amount := amountsOut[*s.Asset1]
+	asset2Amount := amountsOut[*s.Asset2]
+
+	algoSuggestedParams, err := s.Client.SuggestedParams()
+	if err != nil {
+		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = burn.PrepareBurnTransactions(
@@ -931,7 +996,7 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount assets.AssetAmount, 
 		asset1Amount.Amount,
 		asset2Amount.Amount,
 		liquidityAssetAmount.Amount,
-		poolerAddress,
+		pooler.String(),
 		suggestedParams,
 	)
 
@@ -939,7 +1004,7 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount assets.AssetAmount, 
 
 }
 
-func (s *Pool) PrepareBurnTransactionsFromQuote(quote BurnQuote, poolerAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareBurnTransactionsFromQuote(quote *BurnQuote, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	amountsOut, err := quote.AmountsOutWithSlippage()
 
@@ -955,15 +1020,31 @@ func (s *Pool) PrepareBurnTransactionsFromQuote(quote BurnQuote, poolerAddress a
 
 }
 
-func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareRedeemTransactions(amountOut *assets.AssetAmount, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if userAddress.IsZero() {
-		userAddress = s.Client.UserAddress
+	if len(userAddress) == 0 {
+		userAddress = s.Client.UserAddress.String()
 	}
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	user, err := algoTypes.DecodeAddress(userAddress)
 	if err != nil {
 		return
+	}
+
+	algoSuggestedParams, err := s.Client.SuggestedParams()
+	if err != nil {
+		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = redeem.PrepareRedeemTransactions(
@@ -973,7 +1054,7 @@ func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddre
 		s.LiquidityAsset.Id,
 		amountOut.Asset.Id,
 		amountOut.Amount,
-		userAddress,
+		user.String(),
 		suggestedParams,
 	)
 
@@ -981,10 +1062,15 @@ func (s *Pool) PrepareRedeemTransactions(amountOut assets.AssetAmount, userAddre
 
 }
 
-func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if userAddress.IsZero() {
-		userAddress = s.Client.UserAddress
+	if len(userAddress) == 0 {
+		userAddress = s.Client.UserAddress.String()
+	}
+
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
 	}
 
 	algoSuggestedParams, err := s.Client.SuggestedParams()
@@ -1005,7 +1091,7 @@ func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGr
 
 	txnGroup, err = optin.PrepareAssetOptinTransactions(
 		s.LiquidityAsset.Id,
-		swapp,
+		user.String(),
 		suggestedParams,
 	)
 
@@ -1013,15 +1099,31 @@ func (s *Pool) PrepareLiquidityAssetOptinTransactions(userAddress string) (txnGr
 
 }
 
-func (s *Pool) PrepareRedeemFeesTransactions(amount uint64, creator algoTypes.Address, userAddress algoTypes.Address) (txnGroup utils.TransactionGroup, err error) {
+func (s *Pool) PrepareRedeemFeesTransactions(amount, creator, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	if userAddress.IsZero() {
-		userAddress = s.Client.UserAddress
+	if len(userAddress) == 0 {
+		userAddress = s.Client.UserAddress.String()
 	}
 
-	suggestedParams, err := s.Client.SuggestedParams()
+	user, err := algoTypes.DecodeAddress(userAddress)
 	if err != nil {
 		return
+	}
+
+	algoSuggestedParams, err := s.Client.SuggestedParams()
+	if err != nil {
+		return
+	}
+
+	suggestedParams := &types.SuggestedParams{
+		Fee:              int(algoSuggestedParams.Fee),
+		GenesisID:        algoSuggestedParams.GenesisID,
+		GenesisHash:      algoSuggestedParams.GenesisHash,
+		FirstRoundValid:  int(algoSuggestedParams.FirstRoundValid),
+		LastRoundValid:   int(algoSuggestedParams.LastRoundValid),
+		ConsensusVersion: algoSuggestedParams.ConsensusVersion,
+		FlatFee:          algoSuggestedParams.FlatFee,
+		MinFee:           int(algoSuggestedParams.MinFee),
 	}
 
 	txnGroup, err = fees.PrepareRedeemFeesTransactions(
@@ -1031,7 +1133,7 @@ func (s *Pool) PrepareRedeemFeesTransactions(amount uint64, creator algoTypes.Ad
 		s.LiquidityAsset.Id,
 		amount,
 		creator,
-		userAddress,
+		user.String(),
 		suggestedParams,
 	)
 
@@ -1064,9 +1166,15 @@ func (s *Pool) GetMinimumBalance() int {
 	return total
 }
 
-func (s *Pool) FetchExcessAmounts(userAddress algoTypes.Address) (excessAmounts map[assets.Asset]assets.AssetAmount, err error) {
-	if userAddress.IsZero() {
-		userAddress = s.Client.UserAddress
+func (s *Pool) FetchExcessAmounts(userAddress string) (excessAmountsStr string, err error) {
+
+	if len(userAddress) == 0 {
+		userAddress = s.Client.UserAddress.String()
+	}
+
+	user, err := algoTypes.DecodeAddress(userAddress)
+	if err != nil {
+		return
 	}
 
 	address, err := s.Address()
@@ -1074,26 +1182,44 @@ func (s *Pool) FetchExcessAmounts(userAddress algoTypes.Address) (excessAmounts 
 		return
 	}
 
-	fetchedExcessAmounts, err := s.Client.FetchExcessAmounts(userAddress)
+	fetchedExcessAmounts := make(map[string]map[int]string)
+	fetchedExcessAmountsStr, err := s.Client.FetchExcessAmounts(user.String())
 	if err != nil {
 		return
 	}
 
+	json.Unmarshal([]byte(fetchedExcessAmountsStr), &fetchedExcessAmounts)
+
 	if val, ok := fetchedExcessAmounts[address.String()]; ok {
-		return val, nil
+
+		var excessAmountsBytes []byte
+		excessAmountsBytes, err = json.Marshal(val)
+		if err != nil {
+			return
+		}
+		excessAmountsStr = string(excessAmountsBytes)
+		return
+
 	} else {
 		return
 	}
 
 }
 
-func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition map[assets.Asset]assets.AssetAmount, share float64, err error) {
+func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPositionStr string, err error) {
 
-	if poolerAddress.IsZero() {
-		poolerAddress = s.Client.UserAddress
+	if len(poolerAddress) == 0 {
+		poolerAddress = s.Client.UserAddress.String()
 	}
 
-	_, accountInfo, err := s.Client.LookupAccountByID(poolerAddress.String())
+	pooler, err := algoTypes.DecodeAddress(poolerAddress)
+	if err != nil {
+		return
+	}
+
+	poolPosition := make(map[string]string)
+
+	_, accountInfo, err := s.Client.LookupAccountByID(pooler.String())
 	if err != nil {
 		return
 	}
@@ -1103,33 +1229,54 @@ func (s *Pool) FetchPoolPosition(poolerAddress algoTypes.Address) (poolPosition 
 		Assets[a.AssetId] = a
 	}
 
-	var liquidityAssetAmount uint64
-	if val, ok := Assets[s.LiquidityAsset.Id]; ok {
-		liquidityAssetAmount = val.Amount
+	var liquidityAssetAmount string
+	if val, ok := Assets[uint64(s.LiquidityAsset.Id)]; ok {
+		liquidityAssetAmount = big.NewInt(int64(val.Amount)).String()
 	} else {
-		liquidityAssetAmount = 0
+		liquidityAssetAmount = "0"
 	}
 
-	liquidityAssetIn := assets.AssetAmount{Asset: s.LiquidityAsset, Amount: liquidityAssetAmount}
+	liquidityAssetIn := &assets.AssetAmount{Asset: *s.LiquidityAsset, Amount: liquidityAssetAmount}
 
 	quote, err := s.FetchBurnQuoteWithDefaultSlippage(liquidityAssetIn)
 	if err != nil {
 		return
 	}
 
-	poolPosition = map[assets.Asset]assets.AssetAmount{
-		s.Asset1:         *quote.AmountsOut[s.Asset1],
-		s.Asset2:         *quote.AmountsOut[s.Asset2],
-		s.LiquidityAsset: quote.LiquidityAssetAmount,
+	LiquidityAssetAmount, _ := new(big.Float).SetString(liquidityAssetAmount)
+	IssuedLiquidity, _ := new(big.Float).SetString(s.IssuedLiquidity)
+
+	share := new(big.Float).Quo(LiquidityAssetAmount, IssuedLiquidity)
+
+	amountsOut := make(map[int]string)
+	amountsOutStr, err := quote.GetAmountsOutStr()
+	if err != nil {
+		return
 	}
 
-	share = float64(liquidityAssetAmount) / float64(s.IssuedLiquidity)
+	err = json.Unmarshal([]byte(amountsOutStr), &amountsOut)
+	if err != nil {
+		return
+	}
 
+	poolPosition = map[string]string{
+		strconv.Itoa(s.Asset1.Id):         amountsOut[s.Asset1.Id],
+		strconv.Itoa(s.Asset2.Id):         amountsOut[s.Asset2.Id],
+		strconv.Itoa(s.LiquidityAsset.Id): quote.LiquidityAssetAmount.Amount,
+		"share":                           share.String(),
+	}
+
+	poolPositionBytes, err := json.Marshal(poolPosition)
+	if err != nil {
+		return
+	}
+
+	poolPositionStr = string(poolPositionBytes)
 	return
 
 }
 
-func (s *Pool) FetchState() (validatorAppState map[string]models.TealValue, err error) {
+func (s *Pool) FetchState() (validatorAppStateStr string, err error) {
 
 	address, err := s.Address()
 	if err != nil {
@@ -1148,13 +1295,20 @@ func (s *Pool) FetchState() (validatorAppState map[string]models.TealValue, err 
 	}
 
 	// validatorAppID := accountInfo.AppsLocalState[0].Id
-	validatorAppState = make(map[string]models.TealValue)
+	validatorAppState := make(map[string]models.TealValue)
 
 	for _, x := range accountInfo.AppsLocalState[0].KeyValue {
 		validatorAppState[x.Key] = x.Value
 	}
 
-	return validatorAppState, nil
+	validatorAppStateBytes, err := json.Marshal(validatorAppState)
+	if err != nil {
+		return
+	}
+
+	validatorAppStateStr = string(validatorAppStateBytes)
+
+	return
 
 }
 
