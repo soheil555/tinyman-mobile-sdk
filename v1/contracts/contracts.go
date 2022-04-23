@@ -8,7 +8,6 @@ import (
 	"tinyman-mobile-sdk/utils"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
-	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
 //go:embed asc.json
@@ -22,13 +21,13 @@ func readContractsFile() (data types.ASC, err error) {
 		return
 	}
 
-	json.Unmarshal(file, &data)
+	err = json.Unmarshal(file, &data)
 
 	return
 
 }
 
-func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (lsig algoTypes.LogicSig, err error) {
+func GetPoolLogicsig(validatorAppID, asset1ID, asset2ID int) (lsig *types.LogicSig, err error) {
 
 	contracts, err := readContractsFile()
 
@@ -39,13 +38,13 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (l
 	poolLogicsigDef := contracts.Contracts.PoolLogicsig.Logic
 	// validatorAppDef := contracts.Contracts.ValidatorApp
 
-	assets := []uint64{asset1ID, asset2ID}
+	assets := []int{asset1ID, asset2ID}
 	sort.Slice(assets, func(i, j int) bool { return assets[i] < assets[j] })
 
 	assetID1 := assets[1]
 	assetID2 := assets[0]
 
-	variables := map[string]uint64{
+	variables := map[string]int{
 		"validator_app_id": validatorAppID,
 		"asset_id_1":       assetID1,
 		"asset_id_2":       assetID2,
@@ -56,7 +55,12 @@ func GetPoolLogicsig(validatorAppID uint64, asset1ID uint64, asset2ID uint64) (l
 		return
 	}
 
-	lsig, err = crypto.MakeLogicSig(programBytes, [][]byte{}, nil, crypto.MultisigAccount{})
+	logsicSig, err := crypto.MakeLogicSig(programBytes, [][]byte{}, nil, crypto.MultisigAccount{})
+	if err != nil {
+		return
+	}
+
+	lsig.Logic = logsicSig.Logic
 
 	return
 

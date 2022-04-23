@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"tinyman-mobile-sdk/types"
 	"tinyman-mobile-sdk/utils"
 	"tinyman-mobile-sdk/v1/contracts"
 
@@ -22,7 +23,23 @@ func hex2Int(hexStr string) uint64 {
 
 }
 
-func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2ID uint64, asset1UnitName string, asset2UnitName string, sender algoTypes.Address, suggestedParams algoTypes.SuggestedParams) (txnGroup utils.TransactionGroup, err error) {
+func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1UnitName, asset2UnitName string, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+
+	sender, err := algoTypes.DecodeAddress(senderAddress)
+	if err != nil {
+		return
+	}
+
+	algoSuggestedParams := algoTypes.SuggestedParams{
+		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
+		GenesisID:        suggestedParams.GenesisID,
+		GenesisHash:      suggestedParams.GenesisHash,
+		FirstRoundValid:  algoTypes.Round(suggestedParams.FirstRoundValid),
+		LastRoundValid:   algoTypes.Round(suggestedParams.LastRoundValid),
+		ConsensusVersion: suggestedParams.ConsensusVersion,
+		FlatFee:          suggestedParams.FlatFee,
+		MinFee:           uint64(suggestedParams.MinFee),
+	}
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
@@ -47,7 +64,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	} else {
 		paymentTxnAmount = 860000
 	}
-	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), paymentTxnAmount, []byte("fee"), "", suggestedParams)
+	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), paymentTxnAmount, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
 		return
@@ -56,24 +73,24 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	var foreignAssets []uint64
 
 	if asset2ID == 0 {
-		foreignAssets = []uint64{asset1ID}
+		foreignAssets = []uint64{uint64(asset1ID)}
 	} else {
-		foreignAssets = []uint64{asset1ID, asset2ID}
+		foreignAssets = []uint64{uint64(asset1ID), uint64(asset2ID)}
 	}
 
-	applicationOptInTxn, err := future.MakeApplicationOptInTx(validatorAppId, [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, suggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
+	applicationOptInTxn, err := future.MakeApplicationOptInTx(uint64(validatorAppId), [][]byte{[]byte("bootstrap"), utils.IntToBytes(asset1ID), utils.IntToBytes(asset2ID)}, nil, nil, foreignAssets, algoSuggestedParams, poolAddress, nil, algoTypes.Digest{}, [32]byte{}, algoTypes.Address{})
 
 	if err != nil {
 		return
 	}
 
-	assetCreateTxn, err := future.MakeAssetCreateTxn(poolAddress.String(), nil, suggestedParams, hex2Int("0xFFFFFFFFFFFFFFFF"), 6, false, "", "", "", "", "TMPOOL11", fmt.Sprintf("TinymanPool1.1 {%s}-{%s}", asset1UnitName, asset2UnitName), "https://tinyman.org", "")
+	assetCreateTxn, err := future.MakeAssetCreateTxn(poolAddress.String(), nil, algoSuggestedParams, hex2Int("0xFFFFFFFFFFFFFFFF"), 6, false, "", "", "", "", "TMPOOL11", fmt.Sprintf("TinymanPool1.1 {%s}-{%s}", asset1UnitName, asset2UnitName), "https://tinyman.org", "")
 
 	if err != nil {
 		return
 	}
 
-	assetOptInTxn1, err := future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset1ID)
+	assetOptInTxn1, err := future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, algoSuggestedParams, "", uint64(asset1ID))
 	if err != nil {
 		return
 	}
@@ -83,7 +100,7 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 	if asset2ID > 0 {
 
 		var assetOptInTxn2 algoTypes.Transaction
-		assetOptInTxn2, err = future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, suggestedParams, "", asset2ID)
+		assetOptInTxn2, err = future.MakeAssetTransferTxn(poolAddress.String(), poolAddress.String(), 0, nil, algoSuggestedParams, "", uint64(asset2ID))
 		if err != nil {
 			return
 		}
@@ -97,7 +114,11 @@ func PrepareBootstrapTransactions(validatorAppId uint64, asset1ID uint64, asset2
 		return
 	}
 
-	err = txnGroup.SignWithLogicsig(poolLogicsig)
+	lsig := types.LogicSig{
+		Logic: poolLogicsig.Logic,
+	}
+
+	err = txnGroup.SignWithLogicsig(lsig)
 
 	return
 }

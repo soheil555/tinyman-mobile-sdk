@@ -6,9 +6,6 @@ import (
 	"tinyman-mobile-sdk/v1/client"
 	"tinyman-mobile-sdk/v1/pools"
 
-	"github.com/algorand/go-algorand-sdk/client/v2/algod"
-	"github.com/algorand/go-algorand-sdk/client/v2/common"
-	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
@@ -48,26 +45,10 @@ func main() {
 
 	fmt.Printf("[+]user address: %s\n", userAccount.Address.String())
 
-	headers := []*common.Header{
-		{
-			Key:   "User-Agent",
-			Value: "algosdk",
-		},
-	}
+	algodClientURL := "https://node.testnet.algoexplorerapi.io"
+	indexerClientURL := "https://algoindexer.testnet.algoexplorerapi.io"
 
-	algodClient, err := algod.MakeClientWithHeaders("https://node.testnet.algoexplorerapi.io", "", headers)
-	if err != nil {
-		fmt.Printf("error making algodClient: %s\n", err)
-		return
-	}
-
-	indexerClient, err := indexer.MakeClientWithHeaders("https://algoindexer.testnet.algoexplorerapi.io", "", headers)
-	if err != nil {
-		fmt.Printf("error making indexerClient: %s\n", err)
-		return
-	}
-
-	client, err := client.NewTinymanTestnetClient(algodClient, indexerClient, userAccount.Address)
+	client, err := client.NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAccount.Address)
 	// By default all subsequent operations are on behalf of userAccount
 
 	if err != nil {

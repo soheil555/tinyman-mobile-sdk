@@ -20,7 +20,7 @@ import (
 /*
 	Return a byte array to be used in LogicSig.
 */
-func GetProgram(definition types.Logic, variables map[string]uint64) (templateBytes []byte, err error) {
+func GetProgram(definition types.Logic, variables map[string]int) (templateBytes []byte, err error) {
 
 	template := definition.Bytecode
 
@@ -68,8 +68,7 @@ func GetProgram(definition types.Logic, variables map[string]uint64) (templateBy
 
 }
 
-//TODO: does checking _type is required
-func EncodeValue(value uint64, _type string) (buf []byte, err error) {
+func EncodeValue(value int, _type string) (buf []byte, err error) {
 
 	if _type == "int" {
 
@@ -83,7 +82,7 @@ func EncodeValue(value uint64, _type string) (buf []byte, err error) {
 
 }
 
-func EncodeVarint(number uint64) (buf []byte) {
+func EncodeVarint(number int) (buf []byte) {
 
 	for {
 		towrite := number & 0x7f
@@ -101,7 +100,7 @@ func EncodeVarint(number uint64) (buf []byte) {
 
 }
 
-func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Transaction, signedTransactions [][]byte, sender algoTypes.Address, senderSK ed25519.PrivateKey) (pendingTrxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Transaction, signedTransactions [][]byte, sender algoTypes.Address, senderSK ed25519.PrivateKey) (trxInfo *types.TrxInfo, err error) {
 
 	for i, txn := range transactions {
 
@@ -142,7 +141,7 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Tr
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
-func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxInfo, err error) {
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
@@ -154,14 +153,14 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.Pend
 
 	txinfo := client.PendingTransactionInformation(txid)
 
-	trxInfo, _, err = txinfo.Do(context.Background())
+	pendingTrxInfo, _, err := txinfo.Do(context.Background())
 
 	if err != nil {
 		err = fmt.Errorf("error getting algod pending transaction info: %s", err)
 		return
 	}
 
-	for !(trxInfo.ConfirmedRound > 0) {
+	for !(pendingTrxInfo.ConfirmedRound > 0) {
 
 		fmt.Println("Waiting for confirmation")
 		lastRound += 1
@@ -172,7 +171,7 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.Pend
 			return
 		}
 
-		trxInfo, _, err = txinfo.Do(context.Background())
+		pendingTrxInfo, _, err = txinfo.Do(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("error getting algod pending transaction info: %s", err)
@@ -181,18 +180,22 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo models.Pend
 
 	}
 
-	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, trxInfo.ConfirmedRound)
-	return trxInfo, txid, nil
+	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
+
+	trxInfo.TxId = txid
+	trxInfo.ConfirmedRound = int(pendingTrxInfo.ConfirmedRound)
+
+	return
 
 }
 
-func IntToBytes(num uint64) []byte {
+func IntToBytes(num int) []byte {
 	data := make([]byte, 8)
-	binary.BigEndian.PutUint64(data[:], num)
+	binary.BigEndian.PutUint64(data[:], uint64(num))
 	return data
 }
 
-func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
+func GetStateInt(state map[string]models.TealValue, key interface{}) int {
 
 	var keyString string
 
@@ -208,7 +211,7 @@ func GetStateInt(state map[string]models.TealValue, key interface{}) uint64 {
 	}
 
 	if val, ok := state[keyString]; ok {
-		return val.Uint
+		return int(val.Uint)
 	}
 	return 0
 
@@ -237,44 +240,66 @@ func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 }
 
 type TransactionGroup struct {
-	Transactions       []algoTypes.Transaction
-	SignedTransactions [][]byte
+	transactions       []algoTypes.Transaction
+	signedTransactions [][]byte
 }
 
-func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup TransactionGroup, err error) {
+func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup *TransactionGroup, err error) {
 
 	transactions, err = transaction.AssignGroupID(transactions, "")
 	if err != nil {
-		return TransactionGroup{}, err
+		return
 	}
 
 	signedTransactions := make([][]byte, len(transactions))
-	return TransactionGroup{transactions, signedTransactions}, nil
+	return &TransactionGroup{transactions, signedTransactions}, nil
 
+}
+
+func (s *TransactionGroup) GetTransactions() []algoTypes.Transaction {
+	return s.transactions
+}
+
+func (s *TransactionGroup) GetSignedTransactions() [][]byte {
+	return s.signedTransactions
 }
 
 // TODO: what is user
-type User interface {
-	SignTransactionGroup(transactionGroup *TransactionGroup)
+// type User interface {
+// 	SignTransactionGroup(transactionGroup *TransactionGroup)
+// }
+
+// func (s *TransactionGroup) Sign(user User) {
+// 	user.SignTransactionGroup(s)
+// }
+
+func (s *TransactionGroup) GetSignedGroup() (signedGroup []byte) {
+
+	for _, txn := range s.signedTransactions {
+		signedGroup = append(signedGroup, txn...)
+	}
+
+	return
+
 }
 
-func (s *TransactionGroup) Sign(user User) {
-	user.SignTransactionGroup(s)
-}
+func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) (err error) {
 
-func (s *TransactionGroup) SignWithLogicsig(logicsig algoTypes.LogicSig) (err error) {
+	lsig := algoTypes.LogicSig{
+		Logic: logicsig.Logic,
+	}
 
 	address := crypto.AddressFromProgram(logicsig.Logic)
 
-	for i, txn := range s.Transactions {
+	for i, txn := range s.transactions {
 		if txn.Sender == address {
-			_, stxBytes, err := crypto.SignLogicsigTransaction(logicsig, txn)
+			_, stxBytes, err := crypto.SignLogicsigTransaction(lsig, txn)
 
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
 
-			s.SignedTransactions[i] = stxBytes
+			s.signedTransactions[i] = stxBytes
 		}
 	}
 
@@ -284,13 +309,13 @@ func (s *TransactionGroup) SignWithLogicsig(logicsig algoTypes.LogicSig) (err er
 
 func (s *TransactionGroup) SignWithPrivateKey(address algoTypes.Address, privateKey ed25519.PrivateKey) (err error) {
 
-	for i, txn := range s.Transactions {
+	for i, txn := range s.transactions {
 		if txn.Sender == address {
-			_, stxBytes, err := crypto.SignTransaction(privateKey, txn)
+			_, stxBytes, err := crypto.SignTransaction([]byte(privateKey), txn)
 			if err != nil {
 				return fmt.Errorf("failed to sign transaction: %v", err)
 			}
-			s.SignedTransactions[i] = stxBytes
+			s.signedTransactions[i] = stxBytes
 		}
 	}
 
@@ -298,17 +323,17 @@ func (s *TransactionGroup) SignWithPrivateKey(address algoTypes.Address, private
 
 }
 
-func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo models.PendingTransactionInfoResponse, Txid string, err error) {
+func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *types.TrxInfo, err error) {
 
 	var signedGroup []byte
 
-	for _, txn := range s.SignedTransactions {
+	for _, txn := range s.signedTransactions {
 
 		signedGroup = append(signedGroup, txn...)
 
 	}
 
-	Txid, err = algod.SendRawTransaction(signedGroup).Do(context.Background())
+	txid, err := algod.SendRawTransaction(signedGroup).Do(context.Background())
 
 	if err != nil {
 		err = fmt.Errorf("failed to send transaction: %v", err)
@@ -316,9 +341,10 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo model
 	}
 
 	if wait {
-		return WaitForConfirmation(algod, Txid)
+		return WaitForConfirmation(algod, txid)
 	}
 
+	trxInfo.TxId = txid
 	return
 
 }
