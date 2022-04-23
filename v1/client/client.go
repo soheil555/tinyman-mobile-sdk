@@ -29,14 +29,6 @@ type TinymanClient struct {
 	UserAddress    string
 }
 
-type TransactionGroup struct {
-	utils.TransactionGroup
-}
-
-type Asset struct {
-	assets.Asset
-}
-
 func NewTinymanClient(algodClientURL, indexerClientURL string, validatorAppId int, userAddress string) (tinymanClient *TinymanClient, err error) {
 
 	user, err := algoTypes.DecodeAddress(userAddress)
@@ -86,7 +78,7 @@ func NewTinymanMainnetClient(algodClientURL, indexerClientURL, userAddress strin
 // func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 // }
 
-func (s *TinymanClient) FetchAsset(assetID int) (asset *Asset, err error) {
+func (s *TinymanClient) FetchAsset(assetID int) (asset *assets.Asset, err error) {
 
 	if _, ok := s.assetsCache[assetID]; !ok {
 
@@ -174,7 +166,7 @@ func (s *TinymanClient) PrepareAppOptinTransactions(userAddress string) (txnGrou
 
 }
 
-func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress string) (txnGroup *TransactionGroup, err error) {
+func (s *TinymanClient) PrepareAssetOptinTransactions(assetID int, userAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(userAddress) == 0 {
 		userAddress = s.UserAddress
