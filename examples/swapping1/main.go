@@ -2,14 +2,15 @@ package main
 
 import (
 	"fmt"
+	"math/big"
 	"os"
 
+	"github.com/soheil555/tinyman-mobile-sdk/assets"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/client"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/pools"
 
 	"github.com/algorand/go-algorand-sdk/crypto"
 	"github.com/algorand/go-algorand-sdk/mnemonic"
-	algoTypes "github.com/algorand/go-algorand-sdk/types"
 	"github.com/joho/godotenv"
 	"github.com/kr/pretty"
 )
@@ -49,7 +50,7 @@ func main() {
 	algodClientURL := "https://node.testnet.algoexplorerapi.io"
 	indexerClientURL := "https://algoindexer.testnet.algoexplorerapi.io"
 
-	client, err := client.NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAccount.Address)
+	client, err := client.NewTinymanTestnetClient(algodClientURL, indexerClientURL, userAccount.Address.String())
 	// By default all subsequent operations are on behalf of userAccount
 
 	if err != nil {
@@ -58,7 +59,7 @@ func main() {
 	}
 
 	// Check if the account is opted into Tinyman and optin if necessary
-	isOptedIn, err := client.IsOptedIn(algoTypes.Address{})
+	isOptedIn, err := client.IsOptedIn("")
 
 	if err != nil {
 		fmt.Printf("error checking if the user has opted into Tinyman: %s\n", err)
@@ -69,19 +70,19 @@ func main() {
 
 		fmt.Println("Account not opted into app, opting in now...")
 
-		transactionGroup, err := client.PrepareAppOptinTransactions(algoTypes.Address{})
+		transactionGroup, err := client.PrepareAppOptinTransactions("")
 		if err != nil {
 			fmt.Printf("error preparing app optin transactions: %s\n", err)
 			return
 		}
 
-		err = transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
+		err = transactionGroup.SignWithPrivateKey(userAccount.Address.String(), string(userAccount.PrivateKey))
 		if err != nil {
 			fmt.Printf("error signing optin transactionGroup: %s\n", err)
 			return
 		}
 
-		_, _, err = client.Submit(transactionGroup, true)
+		_, err = client.Submit(transactionGroup, true)
 		if err != nil {
 			fmt.Printf("error submitting optin transactionGroup: %s\n", err)
 			return
@@ -104,14 +105,14 @@ func main() {
 
 	// Fetch the pool we will work with
 	//TODO: make pool from client
-	pool, err := pools.NewPool(client, TINYUSDC, ALGO, pools.PoolInfo{}, true, 0)
+	pool, err := pools.NewPool(client, TINYUSDC, ALGO, nil, true, 0)
 	if err != nil {
 		fmt.Printf("error making pool: %s\n", err)
 		return
 	}
 
 	// Get a quote for a swap of 1 ALGO to TINYUSDC with 1% slippage tolerance
-	quote, err := pool.FetchFixedInputSwapQuote(ALGO.Call(1_000_000), 0.01)
+	quote, err := pool.FetchFixedInputSwapQuote(ALGO.Call("1000000"), 0.01)
 	if err != nil {
 		fmt.Printf("error fetching fixed input swap quote: %s\n", err)
 		return
@@ -139,55 +140,61 @@ func main() {
 		fmt.Printf("Swapping %v to %v\n", quote.AmountIn, amountOutWithSlippage)
 
 		// Prepare a transaction group
-		transactionGroup, err := pool.PrepareSwapTransactionsFromQuote(quote, algoTypes.Address{})
+		transactionGroup, err := pool.PrepareSwapTransactionsFromQuote(quote, "")
 		if err != nil {
 			fmt.Printf("error preparing swap transactions from quote: %s\n", err)
 			return
 		}
 
 		// Sign the group with our key
-		err = transactionGroup.SignWithPrivateKey(userAccount.Address, privateKey)
+		err = transactionGroup.SignWithPrivateKey(userAccount.Address.String(), string(privateKey))
 		if err != nil {
 			fmt.Printf("error signing swap transactionGroup: %s\n", err)
 			return
 		}
 
 		// Submit transactions to the network and wait for confirmation
-		_, _, err = client.Submit(transactionGroup, true)
+		_, err = client.Submit(transactionGroup, true)
 		if err != nil {
 			fmt.Printf("error submitting swap transactionGroup: %s\n", err)
 			return
 		}
 
 		// Check if any excess remaining after the swap
-		excessAmounts, err := pool.FetchExcessAmounts(algoTypes.Address{})
+		excessAmounts, err := pool.FetchExcessAmounts("")
 		if err != nil {
 			fmt.Printf("error fetching excess amounts: %v\n", excessAmounts)
 			return
 		}
 
-		if excess, ok := excessAmounts[TINYUSDC]; ok {
+		if excess, ok := excessAmounts[TINYUSDC.Id]; ok {
 
-			fmt.Printf("Excess: %d \n", excess.Amount)
+			fmt.Printf("Excess: %s \n", excess)
 
+			excessUint, _ := new(big.Int).SetString(excess, 10)
 			// We might just let the excess accumulate rather than redeeming if its < 1 TinyUSDC
-			if excess.Amount > 1_000 {
+			if excessUint.Cmp(big.NewInt(1_000)) > 0 {
 
 				fmt.Println("redeeming excess amount...")
 
-				transactionGroup, err := pool.PrepareRedeemTransactions(excess, algoTypes.Address{})
+				assetAmount := &assets.AssetAmount{
+					Asset:  TINYUSDC,
+					Amount: excess,
+				}
+
+				transactionGroup, err := pool.PrepareRedeemTransactions(assetAmount, "")
 				if err != nil {
 					fmt.Printf("error preparing redeem transactions: %s\n", err)
 					return
 				}
 
-				err = transactionGroup.SignWithPrivateKey(userAccount.Address, userAccount.PrivateKey)
+				err = transactionGroup.SignWithPrivateKey(userAccount.Address.String(), string(userAccount.PrivateKey))
 				if err != nil {
 					fmt.Printf("error signing redeem transactionGroup with private key: %s\n", err)
 					return
 				}
 
-				_, _, err = client.Submit(transactionGroup, true)
+				_, err = client.Submit(transactionGroup, true)
 				if err != nil {
 					fmt.Printf("error submitting reddem transactionGroup: %s\n", err)
 					return
