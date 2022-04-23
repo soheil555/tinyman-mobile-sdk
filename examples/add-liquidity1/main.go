@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/big"
 	"os"
@@ -92,19 +91,7 @@ func main() {
 	pretty.Println(quote)
 
 	// Check if we are happy with the quote...
-	amountsInStr, err := quote.GetAmountsInStr()
-	if err != nil {
-		fmt.Printf("error getting quote amountsIn: %s\n", amountsInStr)
-		return
-	}
-
-	amountsIn := make(map[int]string)
-	err = json.Unmarshal([]byte(amountsInStr), &amountsIn)
-
-	if err != nil {
-		fmt.Printf("error convert amountsInStr to map")
-		return
-	}
+	amountsIn := quote.GetAmountsIn()
 
 	algoAmountsIn, _ := new(big.Int).SetString(amountsIn[ALGO.Id], 10)
 
