@@ -61,7 +61,9 @@ func GetPoolLogicsig(validatorAppID, asset1ID, asset2ID int) (lsig *types.LogicS
 		return
 	}
 
-	lsig.Logic = logsicSig.Logic
+	lsig = &types.LogicSig{
+		Logic: logsicSig.Logic,
+	}
 
 	return
 

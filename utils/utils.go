@@ -183,8 +183,10 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxI
 
 	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
 
-	trxInfo.TxId = txid
-	trxInfo.ConfirmedRound = int(pendingTrxInfo.ConfirmedRound)
+	trxInfo = &types.TrxInfo{
+		TxId:           txid,
+		ConfirmedRound: int(pendingTrxInfo.ConfirmedRound),
+	}
 
 	return
 
