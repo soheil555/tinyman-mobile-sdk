@@ -49,7 +49,7 @@ func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
 }
 
 func (s *Asset) Call(amount string) (assetAmount *AssetAmount) {
-	return &AssetAmount{*s, amount}
+	return &AssetAmount{s, amount}
 }
 
 func (s *Asset) Hash() int {
@@ -61,7 +61,7 @@ func (s *Asset) String() string {
 }
 
 type AssetAmount struct {
-	Asset  Asset
+	Asset  *Asset
 	Amount string
 }
 
