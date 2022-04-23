@@ -347,7 +347,9 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *type
 		return WaitForConfirmation(algod, txid)
 	}
 
-	trxInfo.TxId = txid
+	trxInfo = &types.TrxInfo{
+		TxId: txid,
+	}
 	return
 
 }

@@ -127,8 +127,9 @@ func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bo
 		return utils.WaitForConfirmation(s.algod, txid)
 	}
 
-	trxInfo.TxId = txid
-
+	trxInfo = &types.TrxInfo{
+		TxId: txid,
+	}
 	return
 
 }
