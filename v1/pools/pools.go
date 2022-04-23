@@ -351,6 +351,8 @@ type Pool struct {
 //TODO: is validatorID == 0 a valid ID
 func NewPool(client *client.TinymanClient, assetA, assetB *assets.Asset, info *PoolInfo, fetch bool, validatorAppId int) (pool *Pool, err error) {
 
+	pool = new(Pool)
+
 	if assetA == nil || assetB == nil {
 		err = fmt.Errorf("assetA and assetB are required")
 		return
@@ -548,13 +550,13 @@ func (s *Pool) Convert(amount *assets.AssetAmount) (assetAmount *assets.AssetAmo
 	if *amount.Asset == *s.Asset1 {
 
 		asset1Price := big.NewFloat(s.Asset1Price())
-		Amount := new(big.Float).Mul(tmp, asset1Price)
+		Amount, _ := new(big.Float).Mul(tmp, asset1Price).Int(nil)
 
 		assetAmount = &assets.AssetAmount{Asset: s.Asset2, Amount: Amount.String()}
 	} else if *amount.Asset == *s.Asset2 {
 
 		asset2Price := big.NewFloat(s.Asset2Price())
-		Amount := new(big.Float).Mul(tmp, asset2Price)
+		Amount, _ := new(big.Float).Mul(tmp, asset2Price).Int(nil)
 		assetAmount = &assets.AssetAmount{Asset: s.Asset1, Amount: Amount.String()}
 	}
 
@@ -852,11 +854,6 @@ func (s *Pool) PrepareSwapTransactions(amountIn *assets.AssetAmount, amountOut *
 
 func (s *Pool) PrepareSwapTransactionsFromQuote(quote *SwapQuote, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
-	swapper, err := algoTypes.DecodeAddress(swapperAddress)
-	if err != nil {
-		return
-	}
-
 	amountIn, err := quote.AmountInWithSlippage()
 
 	if err != nil {
@@ -869,7 +866,7 @@ func (s *Pool) PrepareSwapTransactionsFromQuote(quote *SwapQuote, swapperAddress
 		return
 	}
 
-	return s.PrepareSwapTransactions(amountIn, amountOut, quote.SwapType, swapper.String())
+	return s.PrepareSwapTransactions(amountIn, amountOut, quote.SwapType, swapperAddress)
 
 }
 
