@@ -1,21 +1,21 @@
 package optout
 
 import (
-	"context"
+	"tinyman-mobile-sdk/utils"
+	"tinyman-mobile-sdk/v1/client"
 
-	"github.com/algorand/go-algorand-sdk/client/v2/algod"
 	"github.com/algorand/go-algorand-sdk/future"
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func GetOptoutTransactions(client *algod.Client, senderAddress string, validatorAppId int) (transactions []*algoTypes.Transaction, err error) {
+func GetOptoutTransactions(client *client.TinymanClient, senderAddress string, validatorAppId int) (trxGroup *utils.TransactionGroup, err error) {
 
 	sender, err := algoTypes.DecodeAddress(senderAddress)
 	if err != nil {
 		return
 	}
 
-	suggestedParams, err := client.SuggestedParams().Do(context.Background())
+	suggestedParams, err := client.SuggestedParams()
 
 	if err != nil {
 		return
@@ -27,7 +27,9 @@ func GetOptoutTransactions(client *algod.Client, senderAddress string, validator
 		return
 	}
 
-	transactions = []*algoTypes.Transaction{&txn}
+	transactions := []algoTypes.Transaction{txn}
+
+	trxGroup, err = utils.NewTransactionGroup(transactions)
 
 	return
 }
