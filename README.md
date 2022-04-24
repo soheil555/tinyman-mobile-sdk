@@ -8,7 +8,7 @@ Tinyman go SDK compatible with go-mobile package.
 
 # Android and IOS versions of the SDK
 
-Visit the [releases](https://github.com/soheil555/tinyman-mobile-sdk/releases/tag/Latest) page for downloading the latest version of the SDK for android.
+Visit the [releases](https://github.com/soheil555/tinyman-mobile-sdk/releases) page for downloading the latest version of the SDK for android.
 
 
 
