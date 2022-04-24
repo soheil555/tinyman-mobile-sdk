@@ -159,7 +159,7 @@ func main() {
 	shareFloat, _ := share.Float64()
 
 	fmt.Printf("Pool Tokens: %v\n", info[strconv.Itoa(pool.LiquidityAsset.Id)])
-	fmt.Printf("Assets: %v, %v\n", info[strconv.Itoa(TINYUSDC.Id)], info[strconv.Itoa(ALGO.Id)])
+	fmt.Printf("Assets: TINYUSDC:%v, ALGO:%v\n", info[strconv.Itoa(TINYUSDC.Id)], info[strconv.Itoa(ALGO.Id)])
 	fmt.Printf("share of pool: %.3f\n", shareFloat*100)
 
 }
