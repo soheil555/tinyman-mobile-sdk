@@ -700,13 +700,16 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn *assets.AssetAmount, slippage flo
 	tmp1 := new(big.Int).Mul(liquidityAssetInAmount, asset1Reserves)
 	tmp2 := new(big.Int).Mul(liquidityAssetInAmount, asset2Reserves)
 
-	asset1Amount := new(big.Int).Div(tmp1, issuedLiquidity)
-	asset2Amount := new(big.Int).Div(tmp2, issuedLiquidity)
+	asset1Amount := new(big.Float).Quo(new(big.Float).SetInt(tmp1), new(big.Float).SetInt(issuedLiquidity))
+	asset2Amount := new(big.Float).Quo(new(big.Float).SetInt(tmp2), new(big.Float).SetInt(issuedLiquidity))
+
+	asset1AmountInt, _ := asset1Amount.Int(nil)
+	asset2AmountInt, _ := asset2Amount.Int(nil)
 
 	quote = &BurnQuote{
 		amountsOut: map[int]string{
-			s.Asset1.Id: asset1Amount.String(),
-			s.Asset2.Id: asset2Amount.String(),
+			s.Asset1.Id: asset1AmountInt.String(),
+			s.Asset2.Id: asset2AmountInt.String(),
 		},
 		LiquidityAssetAmount: liquidityAssetIn,
 		Slippage:             slippage,
@@ -757,14 +760,17 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn *assets.AssetAmount, slippage f
 	AssetInAmount, _ := new(big.Int).SetString(assetInAmount, 10)
 
 	tmp := new(big.Int).Mul(AssetInAmount, big.NewInt(997))
-	assetInAmountMinusFee := new(big.Int).Div(tmp, big.NewInt(1000))
-	swapFees := new(big.Int).Sub(AssetInAmount, assetInAmountMinusFee)
 
-	tmp = new(big.Int).Add(InputSupply, assetInAmountMinusFee)
-	tmp = new(big.Int).Div(k, tmp)
-	assetOutAmount := new(big.Int).Sub(OutputSupply, tmp)
+	assetInAmountMinusFee := new(big.Float).Quo(new(big.Float).SetInt(tmp), big.NewFloat(1000))
+	swapFees := new(big.Float).Sub(new(big.Float).SetInt(AssetInAmount), assetInAmountMinusFee)
 
-	amountOut := assets.AssetAmount{Asset: assetOut, Amount: assetOutAmount.String()}
+	tmp2 := new(big.Float).Add(new(big.Float).SetInt(InputSupply), assetInAmountMinusFee)
+	tmp2 = new(big.Float).Quo(new(big.Float).SetInt(k), tmp2)
+	assetOutAmount := new(big.Float).Sub(new(big.Float).SetInt(OutputSupply), tmp2)
+
+	assetOutAmountInt, _ := assetOutAmount.Int(nil)
+
+	amountOut := assets.AssetAmount{Asset: assetOut, Amount: assetOutAmountInt.String()}
 
 	quote = &SwapQuote{
 		SwapType:  "fixed-input",
@@ -805,27 +811,30 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut *assets.AssetAmount, slippage
 		outputSupply = s.Asset2Reserves
 	}
 
-	InputSupply, _ := new(big.Int).SetString(inputSupply, 10)
-	OutputSupply, _ := new(big.Int).SetString(outputSupply, 10)
-	AssetOutAmount, _ := new(big.Int).SetString(assetOutAmount, 10)
+	InputSupply, _ := new(big.Float).SetString(inputSupply)
+	OutputSupply, _ := new(big.Float).SetString(outputSupply)
+	AssetOutAmount, _ := new(big.Float).SetString(assetOutAmount)
 
-	k := new(big.Int).Mul(InputSupply, OutputSupply)
+	k := new(big.Float).Mul(InputSupply, OutputSupply)
 
-	tmp := new(big.Int).Div(k, new(big.Int).Sub(OutputSupply, AssetOutAmount))
-	calculatedAmountInWithoutFee := new(big.Int).Sub(tmp, InputSupply)
+	tmp := new(big.Float).Quo(k, new(big.Float).Sub(OutputSupply, AssetOutAmount))
+	calculatedAmountInWithoutFee := new(big.Float).Sub(tmp, InputSupply)
 
-	assetInAmount := new(big.Int).Mul(calculatedAmountInWithoutFee, big.NewInt(1000))
-	assetInAmount.Div(assetInAmount, big.NewInt(997))
+	assetInAmount := new(big.Float).Mul(calculatedAmountInWithoutFee, big.NewFloat(1000))
+	assetInAmount.Quo(assetInAmount, big.NewFloat(997))
 
-	swapFees := new(big.Int).Sub(assetInAmount, calculatedAmountInWithoutFee)
+	swapFees := new(big.Float).Sub(assetInAmount, calculatedAmountInWithoutFee)
 
-	amountIn := assets.AssetAmount{Asset: assetIn, Amount: assetInAmount.String()}
+	swapFeesInt, _ := swapFees.Int(nil)
+	assetInAmountInt, _ := assetInAmount.Int(nil)
+
+	amountIn := assets.AssetAmount{Asset: assetIn, Amount: assetInAmountInt.String()}
 
 	quote = &SwapQuote{
 		SwapType:  "fixed-output",
 		AmountIn:  &amountIn,
 		AmountOut: amountOut,
-		SwapFees:  &assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFees.String()},
+		SwapFees:  &assets.AssetAmount{Asset: amountIn.Asset, Amount: swapFeesInt.String()},
 		Slippage:  slippage,
 	}
 
