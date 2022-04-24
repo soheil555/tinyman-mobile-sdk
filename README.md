@@ -12,7 +12,7 @@ Visit the [releases](https://github.com/soheil555/tinyman-mobile-sdk/releases/ta
 
 
 
-> I don't have access to a Mac to run the go-mobile bind command for IOS, so IOS version is not available for now.
+> I don't have access to a Mac PC to run the go-mobile bind command for IOS, so IOS version is not available for now.
 
 
 
