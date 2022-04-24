@@ -13,7 +13,7 @@ import (
 	algoTypes "github.com/algorand/go-algorand-sdk/types"
 )
 
-func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, asset1Amount, asset2Amount, liquidityAssetAmount string, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
+func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetID int, asset1Amount, asset2Amount, liquidityAssetAmount, senderAddress string, suggestedParams *types.SuggestedParams) (txnGroup *utils.TransactionGroup, err error) {
 
 	sender, err := algoTypes.DecodeAddress(senderAddress)
 	if err != nil {

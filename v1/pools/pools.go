@@ -65,6 +65,7 @@ func GetPoolInfo(client *client.TinymanClient, validatorAppID, asset1ID, asset2I
 
 }
 
+// not compatible with go-mobile
 func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo, err error) {
 
 	if len(accountInfo.AppsLocalState) == 0 {
@@ -252,7 +253,7 @@ func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
 
 //TODO: in python code AmountsIn is dict[AssetAmount]
 type MintQuote struct {
-	amountsIn            map[int]string
+	amountsIn            map[int]string // map[asset.id][assetAmount.Amount]
 	LiquidityAssetAmount *assets.AssetAmount
 	Slippage             float64
 }
@@ -277,7 +278,7 @@ func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount *assets.Asse
 }
 
 type BurnQuote struct {
-	amountsOut           map[int]string
+	amountsOut           map[int]string // map[asset.id][assetAmount.Amount]
 	LiquidityAssetAmount *assets.AssetAmount
 	Slippage             float64
 }
@@ -395,6 +396,7 @@ func NewPool(client *client.TinymanClient, assetA, assetB *assets.Asset, info *P
 
 }
 
+// not compatible with go-mobile
 func NewPoolFromAccountInfo(accountInfo models.Account, client *client.TinymanClient) (pool *Pool, err error) {
 
 	info, err := GetPoolInfoFromAccountInfo(accountInfo)
@@ -679,7 +681,7 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 
 }
 
-func (s *Pool) FetchMintQuoteWithDefaultSlippage(amountA *assets.AssetAmount, amountB *assets.AssetAmount) (quote *MintQuote, err error) {
+func (s *Pool) FetchMintQuoteWithDefaultSlippage(amountA, amountB *assets.AssetAmount) (quote *MintQuote, err error) {
 
 	return s.FetchMintQuote(amountA, amountB, 0.05)
 
@@ -846,7 +848,7 @@ func (s *Pool) FetchFixedOutputSwapQuoteWithDefaultSlippage(amountOut *assets.As
 	return s.FetchFixedOutputSwapQuote(amountOut, 0.05)
 }
 
-func (s *Pool) PrepareSwapTransactions(amountIn *assets.AssetAmount, amountOut *assets.AssetAmount, swapType string, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
+func (s *Pool) PrepareSwapTransactions(amountIn, amountOut *assets.AssetAmount, swapType string, swapperAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(swapperAddress) == 0 {
 		swapperAddress = s.Client.UserAddress
@@ -1398,6 +1400,7 @@ func (s *Pool) FetchStateStr() (validatorAppStateStr string, err error) {
 
 }
 
+// not compatible with go-mobile
 func (s *Pool) FetchStateWithKey(key interface{}) (state int, err error) {
 
 	address, err := s.Address()
