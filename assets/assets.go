@@ -121,7 +121,7 @@ func (s *AssetAmount) Sub(o *AssetAmount) (assetAmount *AssetAmount, err error) 
 		return
 	}
 
-	Amount := new(big.Int).Add(sAmount, oAmount)
+	Amount := new(big.Int).Sub(sAmount, oAmount)
 
 	assetAmount = &AssetAmount{s.Asset, Amount.String()}
 	return

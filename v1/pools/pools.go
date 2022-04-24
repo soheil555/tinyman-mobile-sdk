@@ -553,10 +553,12 @@ func (s *Pool) Convert(amount *assets.AssetAmount) (assetAmount *assets.AssetAmo
 		Amount, _ := new(big.Float).Mul(tmp, asset1Price).Int(nil)
 
 		assetAmount = &assets.AssetAmount{Asset: s.Asset2, Amount: Amount.String()}
+
 	} else if *amount.Asset == *s.Asset2 {
 
 		asset2Price := big.NewFloat(s.Asset2Price())
 		Amount, _ := new(big.Float).Mul(tmp, asset2Price).Int(nil)
+
 		assetAmount = &assets.AssetAmount{Asset: s.Asset1, Amount: Amount.String()}
 	}
 
@@ -590,32 +592,57 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 		return
 	}
 
-	issuedLiquidity, _ := new(big.Int).SetString(s.IssuedLiquidity, 10)
-	if issuedLiquidity.Cmp(big.NewInt(0)) > 0 {
+	issuedLiquidity, ok := new(big.Int).SetString(s.IssuedLiquidity, 10)
+	if ok && issuedLiquidity.Cmp(big.NewInt(0)) > 0 {
 
-		if reflect.ValueOf(amount1).IsZero() {
+		if amount1 == nil {
 			amount1 = s.Convert(amount2)
 		}
 
-		if reflect.ValueOf(amount2).IsZero() {
+		if amount2 == nil {
 			amount2 = s.Convert(amount1)
 		}
 
-		amount1Amount, _ := new(big.Int).SetString(amount1.Amount, 10)
-		amount2Amount, _ := new(big.Int).SetString(amount2.Amount, 10)
-		asset1Reserves, _ := new(big.Int).SetString(s.Asset1Reserves, 10)
-		asset2Reserves, _ := new(big.Int).SetString(s.Asset2Reserves, 10)
+		amount1Amount, ok := new(big.Int).SetString(amount1.Amount, 10)
+		if !ok {
+			err = fmt.Errorf("failed to convert amount1.Amount to int")
+			return
+		}
+
+		amount2Amount, ok := new(big.Int).SetString(amount2.Amount, 10)
+		if !ok {
+			err = fmt.Errorf("failed to convert amount2.Amount to int")
+			return
+		}
+
+		asset1Reserves, ok := new(big.Int).SetString(s.Asset1Reserves, 10)
+		if !ok {
+			err = fmt.Errorf("failed to convert Asset1Reserves to int")
+			return
+		}
+
+		asset2Reserves, ok := new(big.Int).SetString(s.Asset2Reserves, 10)
+		if !ok {
+			err = fmt.Errorf("failed to convert Asset2Reserves to int")
+			return
+		}
 
 		tmp1 := new(big.Int).Mul(amount1Amount, issuedLiquidity)
 		tmp2 := new(big.Int).Mul(amount2Amount, issuedLiquidity)
 
-		a := new(big.Int).Div(tmp1, asset1Reserves)
-		b := new(big.Int).Div(tmp2, asset2Reserves)
+		a := new(big.Float).Quo(new(big.Float).SetInt(tmp1), new(big.Float).SetInt(asset1Reserves))
+		b := new(big.Float).Quo(new(big.Float).SetInt(tmp2), new(big.Float).SetInt(asset2Reserves))
 
 		if a.Cmp(b) < 0 {
+
+			a, _ := a.Int(nil)
 			liquidityAssetAmount = a.String()
+
 		} else {
+
+			b, _ := b.Int(nil)
 			liquidityAssetAmount = b.String()
+
 		}
 
 	} else {
@@ -625,14 +652,16 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 			return
 		}
 
-		amount1Amount, _ := new(big.Int).SetString(amount1.Amount, 10)
-		amount2Amount, _ := new(big.Int).SetString(amount2.Amount, 10)
+		amount1Amount, _ := new(big.Float).SetString(amount1.Amount)
+		amount2Amount, _ := new(big.Float).SetString(amount2.Amount)
 
-		tmp := new(big.Int).Mul(amount1Amount, amount2Amount)
+		tmp := new(big.Float).Mul(amount1Amount, amount2Amount)
 		tmp.Sqrt(tmp)
-		tmp.Sub(tmp, big.NewInt(1000))
+		tmp.Sub(tmp, big.NewFloat(1000))
 
-		liquidityAssetAmount = tmp.String()
+		tmpInt, _ := tmp.Int(nil)
+
+		liquidityAssetAmount = tmpInt.String()
 		slippage = 0
 
 	}

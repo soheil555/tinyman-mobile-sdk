@@ -1,6 +1,7 @@
 package mint
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/soheil555/tinyman-mobile-sdk/types"
@@ -38,16 +39,19 @@ func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 
 	Asset1Amount, ok := new(big.Int).SetString(asset1Amount, 10)
 	if !ok {
+		err = fmt.Errorf("failed to convert asset1Amount to int")
 		return
 	}
 
 	Asset2Amount, ok := new(big.Int).SetString(asset2Amount, 10)
 	if !ok {
+		err = fmt.Errorf("failed to convert asset1Amount to int")
 		return
 	}
 
 	LiquidityAssetAmount, ok := new(big.Int).SetString(liquidityAssetAmount, 10)
 	if !ok {
+		err = fmt.Errorf("failed to convert asset1Amount to int")
 		return
 	}
 
