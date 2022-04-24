@@ -4,8 +4,6 @@ Tinyman go SDK compatible with go-mobile package.
 
 
 
-**Currently Under Testing**
-
 
 
 # Go-Mobile Compatibility
@@ -169,7 +167,7 @@ go test -v ./...
 
 
 - Methods starting with `Fetch` all make network requests to fetch current balances/state.
-- Methods of the form `PrepareXTransactions` all return `TransactionGroup` structs (see below).
+- Methods of the form `PrepareXTransactions` all return `TransactionGroup` structs.
 - All asset amounts are returned as `AssetAmount` structs which contain an `Asset` and `amount` (`string`).
 - All asset amount inputs are expected as micro units e.g. 1 Algo = 1_000_000 micro units.
 
