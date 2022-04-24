@@ -20,6 +20,7 @@ func NewAsset(id int, name string, unitName string, decimals int) *Asset {
 	return &Asset{id, name, unitName, decimals}
 }
 
+// not compatible with go-mobile
 func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
 
 	var params models.AssetParams

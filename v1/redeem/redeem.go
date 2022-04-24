@@ -87,7 +87,7 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 		return
 	}
 
-	lsig := types.LogicSig{
+	lsig := &types.LogicSig{
 		Logic: poolLogicsig.Logic,
 	}
 

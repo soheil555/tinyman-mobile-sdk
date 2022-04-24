@@ -98,16 +98,19 @@ func (s *TinymanClient) FetchAsset(assetID int) (asset *assets.Asset, err error)
 
 }
 
+// not compatible with go-mobile
 func (s *TinymanClient) LookupAccountByID(address string) (validRound uint64, result models.Account, err error) {
 
 	return s.indexer.LookupAccountByID(address).Do(context.Background())
 
 }
 
+// not compatible with go-mobile
 func (s *TinymanClient) AccountInformation(address string) (response models.Account, err error) {
 	return s.algod.AccountInformation(address).Do(context.Background())
 }
 
+// not compatible with go-mobile
 func (s *TinymanClient) SuggestedParams() (params algoTypes.SuggestedParams, err error) {
 	return s.algod.SuggestedParams().Do(context.Background())
 }

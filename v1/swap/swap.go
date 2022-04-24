@@ -113,7 +113,7 @@ func PrepareSwapTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		return
 	}
 
-	lsig := types.LogicSig{
+	lsig := &types.LogicSig{
 		Logic: poolLogicsig.Logic,
 	}
 

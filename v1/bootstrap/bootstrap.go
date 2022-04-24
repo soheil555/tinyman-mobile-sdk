@@ -115,7 +115,7 @@ func PrepareBootstrapTransactions(validatorAppId, asset1ID, asset2ID int, asset1
 		return
 	}
 
-	lsig := types.LogicSig{
+	lsig := &types.LogicSig{
 		Logic: poolLogicsig.Logic,
 	}
 

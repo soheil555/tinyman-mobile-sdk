@@ -21,6 +21,8 @@ import (
 /*
 	Return a byte array to be used in LogicSig.
 */
+
+// not compatible with go-mobile
 func GetProgram(definition types.Logic, variables map[string]int) (templateBytes []byte, err error) {
 
 	template := definition.Bytecode
@@ -69,16 +71,16 @@ func GetProgram(definition types.Logic, variables map[string]int) (templateBytes
 
 }
 
-func EncodeValue(value int, _type string) (buf []byte, err error) {
+func EncodeValue(value int, valueType string) (buf []byte, err error) {
 
-	if _type == "int" {
+	if valueType == "int" {
 
 		buf = EncodeVarint(value)
 		return
 
 	}
 
-	err = fmt.Errorf("unsupported value type %s", _type)
+	err = fmt.Errorf("unsupported value type %s", valueType)
 	return
 
 }
@@ -101,6 +103,7 @@ func EncodeVarint(number int) (buf []byte) {
 
 }
 
+// not compatible with go-mobile
 func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Transaction, signedTransactions [][]byte, sender algoTypes.Address, senderSK ed25519.PrivateKey) (trxInfo *types.TrxInfo, err error) {
 
 	for i, txn := range transactions {
@@ -198,6 +201,7 @@ func IntToBytes(num int) []byte {
 	return data
 }
 
+// not compatible with go-mobile
 func GetStateInt(state map[string]models.TealValue, key interface{}) int {
 
 	var keyString string
@@ -220,6 +224,7 @@ func GetStateInt(state map[string]models.TealValue, key interface{}) int {
 
 }
 
+// not compatible with go-mobile
 func GetStateBytes(state map[string]models.TealValue, key interface{}) string {
 
 	var keyString string
@@ -247,6 +252,7 @@ type TransactionGroup struct {
 	signedTransactions [][]byte
 }
 
+// not compatible with go-mobile
 func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup *TransactionGroup, err error) {
 
 	transactions, err = transaction.AssignGroupID(transactions, "")
@@ -259,10 +265,12 @@ func NewTransactionGroup(transactions []algoTypes.Transaction) (transactionGroup
 
 }
 
+// not compatible with go-mobile
 func (s *TransactionGroup) GetTransactions() []algoTypes.Transaction {
 	return s.transactions
 }
 
+// not compatible with go-mobile
 func (s *TransactionGroup) GetSignedTransactions() [][]byte {
 	return s.signedTransactions
 }
@@ -286,7 +294,7 @@ func (s *TransactionGroup) GetSignedGroup() (signedGroup []byte) {
 
 }
 
-func (s *TransactionGroup) SignWithLogicsig(logicsig types.LogicSig) (err error) {
+func (s *TransactionGroup) SignWithLogicsig(logicsig *types.LogicSig) (err error) {
 
 	lsig := algoTypes.LogicSig{
 		Logic: logicsig.Logic,
@@ -326,6 +334,7 @@ func (s *TransactionGroup) SignWithPrivateKey(address string, privateKey string)
 
 }
 
+// not compatible with go-mobile
 func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *types.TrxInfo, err error) {
 
 	var signedGroup []byte
