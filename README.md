@@ -6,12 +6,22 @@ Tinyman go SDK compatible with go-mobile package.
 
 
 
+# Android and IOS versions of the SDK
+
+Visit the [releases](https://github.com/soheil555/tinyman-mobile-sdk/releases/tag/Latest) page for downloading the latest version of the SDK for android.
+
+
+
+> I don't have access to a Mac to run the go-mobile bind command for IOS, so IOS version is not available for now.
+
+
+
 # Go-Mobile Compatibility
 
 Due to go-mobile type restrictions for exported symbols:
 
 - Numeric values that aren't likely to have a value more than 64 bit have an`int` type.
-- Numeric Values like Balance that may have a large value have a `string` type and during mathematical calculations, they will be converted to `*big.Int` or `*big.Float` type.
+- Numeric Values like Balance that may have a large value have a `string` type and during mathematical calculations, they will be converted to `*big.Int` or `*big.Float` types.
 - For methods that return a map( like `FetchExcessAmounts` method ), there is a method that ends with `Str` ( like `FetchExcessAmountsStr` ) that return JSON String of the map.
 - Struct fields that are not supported by go-mobile are unexported and there is a getter method for each one of them in the form of `GetFieldName`
 
