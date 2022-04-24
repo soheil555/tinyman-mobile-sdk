@@ -16,6 +16,10 @@ type Asset struct {
 	Decimals int
 }
 
+func NewAsset(id int, name string, unitName string, decimals int) *Asset {
+	return &Asset{id, name, unitName, decimals}
+}
+
 func (s *Asset) Fetch(indexer *indexer.Client) (err error) {
 
 	var params models.AssetParams
@@ -65,14 +69,18 @@ type AssetAmount struct {
 	Amount string
 }
 
-func (s *AssetAmount) Mul(o float64) (assetAmount *AssetAmount) {
+func NewAssetAmount(asset *Asset, amount string) *AssetAmount {
+	return &AssetAmount{asset, amount}
+}
+
+func (s *AssetAmount) Mul(other float64) (assetAmount *AssetAmount) {
 
 	sAmount, ok := new(big.Float).SetString(s.Amount)
 	if !ok {
 		return
 	}
 
-	mulResult := new(big.Float).Mul(sAmount, big.NewFloat(o))
+	mulResult := new(big.Float).Mul(sAmount, big.NewFloat(other))
 	Amount, _ := mulResult.Int(nil)
 
 	assetAmount = &AssetAmount{s.Asset, Amount.String()}
@@ -80,9 +88,9 @@ func (s *AssetAmount) Mul(o float64) (assetAmount *AssetAmount) {
 
 }
 
-func (s *AssetAmount) Add(o *AssetAmount) (assetAmount *AssetAmount, err error) {
+func (s *AssetAmount) Add(other *AssetAmount) (assetAmount *AssetAmount, err error) {
 
-	if s.Asset != o.Asset {
+	if *s.Asset != *other.Asset {
 		err = fmt.Errorf("unsupported asset type for +")
 		return
 	}
@@ -92,7 +100,7 @@ func (s *AssetAmount) Add(o *AssetAmount) (assetAmount *AssetAmount, err error) 
 		return
 	}
 
-	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
 	if !ok {
 		return
 	}
@@ -104,9 +112,9 @@ func (s *AssetAmount) Add(o *AssetAmount) (assetAmount *AssetAmount, err error) 
 
 }
 
-func (s *AssetAmount) Sub(o *AssetAmount) (assetAmount *AssetAmount, err error) {
+func (s *AssetAmount) Sub(other *AssetAmount) (assetAmount *AssetAmount, err error) {
 
-	if s.Asset != o.Asset {
+	if *s.Asset != *other.Asset {
 		err = fmt.Errorf("unsupported asset type for -")
 		return
 	}
@@ -116,7 +124,7 @@ func (s *AssetAmount) Sub(o *AssetAmount) (assetAmount *AssetAmount, err error) 
 		return
 	}
 
-	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
 	if !ok {
 		return
 	}
@@ -128,9 +136,9 @@ func (s *AssetAmount) Sub(o *AssetAmount) (assetAmount *AssetAmount, err error) 
 
 }
 
-func (s *AssetAmount) Eq(o *AssetAmount) (bool, error) {
+func (s *AssetAmount) Eq(other *AssetAmount) (bool, error) {
 
-	if s.Asset != o.Asset {
+	if *s.Asset != *other.Asset {
 		return false, fmt.Errorf("unsupported asset type for ==")
 	}
 
@@ -139,7 +147,7 @@ func (s *AssetAmount) Eq(o *AssetAmount) (bool, error) {
 		return false, nil
 	}
 
-	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
 	if !ok {
 		return false, nil
 	}
@@ -148,9 +156,9 @@ func (s *AssetAmount) Eq(o *AssetAmount) (bool, error) {
 
 }
 
-func (s *AssetAmount) Gt(o *AssetAmount) (bool, error) {
+func (s *AssetAmount) Gt(other *AssetAmount) (bool, error) {
 
-	if s.Asset != o.Asset {
+	if *s.Asset != *other.Asset {
 		return false, fmt.Errorf("unsupported asset type for >")
 	}
 
@@ -159,7 +167,7 @@ func (s *AssetAmount) Gt(o *AssetAmount) (bool, error) {
 		return false, nil
 	}
 
-	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
 	if !ok {
 		return false, nil
 	}
@@ -168,9 +176,9 @@ func (s *AssetAmount) Gt(o *AssetAmount) (bool, error) {
 
 }
 
-func (s *AssetAmount) Lt(o *AssetAmount) (bool, error) {
+func (s *AssetAmount) Lt(other *AssetAmount) (bool, error) {
 
-	if s.Asset != o.Asset {
+	if *s.Asset != *other.Asset {
 		return false, fmt.Errorf("unsupported asset type for <")
 	}
 
@@ -179,7 +187,7 @@ func (s *AssetAmount) Lt(o *AssetAmount) (bool, error) {
 		return false, nil
 	}
 
-	oAmount, ok := new(big.Int).SetString(o.Amount, 10)
+	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
 	if !ok {
 		return false, nil
 	}
