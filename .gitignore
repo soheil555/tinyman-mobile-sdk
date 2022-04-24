@@ -1,3 +1,4 @@
 .vscode
 .env
 android/libs
+ios/libs
