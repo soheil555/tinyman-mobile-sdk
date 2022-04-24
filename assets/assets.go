@@ -190,12 +190,12 @@ func (s *AssetAmount) Lt(o *AssetAmount) (bool, error) {
 
 func (s *AssetAmount) String() string {
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
+	sAmount, ok := new(big.Float).SetString(s.Amount)
 	if !ok {
 		return ""
 	}
-
-	amount := new(big.Int).Div(sAmount, new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil))
+	tmp := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil)
+	amount := new(big.Float).Quo(sAmount, new(big.Float).SetInt(tmp))
 	return fmt.Sprintf("%s('%s')", s.Asset.UnitName, amount.String())
 
 }
