@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/soheil555/tinyman-mobile-sdk/assets"
+	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/client"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/pools"
 
@@ -177,7 +177,7 @@ func main() {
 
 				fmt.Println("redeeming excess amount...")
 
-				assetAmount := &assets.AssetAmount{
+				assetAmount := &types.AssetAmount{
 					Asset:  TINYUSDC,
 					Amount: excess,
 				}

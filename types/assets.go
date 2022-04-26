@@ -1,4 +1,4 @@
-package assets
+package types
 
 import (
 	"context"
@@ -7,7 +7,6 @@ import (
 
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
-	"github.com/soheil555/tinyman-mobile-sdk/utils"
 )
 
 type Asset struct {
@@ -66,7 +65,6 @@ func (s *Asset) String() string {
 	return fmt.Sprintf("Asset(%s - %d)", s.UnitName, s.Id)
 }
 
-
 //TODO: maybe make Amount unexported and create setter and getter methods to make sure amount is always integer
 type AssetAmount struct {
 	Asset  *Asset
@@ -79,7 +77,7 @@ func NewAssetAmount(asset *Asset, amount string) *AssetAmount {
 
 func (s *AssetAmount) Mul(other float64) (assetAmount *AssetAmount) {
 
-	sAmount := utils.NewBigFloatString(s.Amount)
+	sAmount := newBigFloatString(s.Amount)
 	product := new(big.Float)
 
 	product.Mul(sAmount, big.NewFloat(other))
@@ -98,8 +96,8 @@ func (s *AssetAmount) Add(other *AssetAmount) (assetAmount *AssetAmount, err err
 		return
 	}
 
-	sAmount := utils.NewBigIntString(s.Amount)
-	oAmount := utils.NewBigIntString(other.Amount)
+	sAmount := newBigIntString(s.Amount)
+	oAmount := newBigIntString(other.Amount)
 
 	sum := new(big.Int)
 	sum.Add(sAmount, oAmount)
@@ -117,9 +115,8 @@ func (s *AssetAmount) Sub(other *AssetAmount) (assetAmount *AssetAmount, err err
 		return
 	}
 
-	sAmount := utils.NewBigIntString(s.Amount)
-
-	oAmount := utils.NewBigIntString(other.Amount)
+	sAmount := newBigIntString(s.Amount)
+	oAmount := newBigIntString(other.Amount)
 
 	difference := new(big.Int)
 	difference.Sub(sAmount, oAmount)
@@ -135,8 +132,8 @@ func (s *AssetAmount) Eq(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for ==")
 	}
 
-	sAmount := utils.NewBigIntString(s.Amount)
-	oAmount := utils.NewBigIntString(other.Amount)
+	sAmount := newBigIntString(s.Amount)
+	oAmount := newBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) == 0, nil
 
@@ -148,8 +145,8 @@ func (s *AssetAmount) Gt(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for >")
 	}
 
-	sAmount := utils.NewBigIntString(s.Amount)
-	oAmount := utils.NewBigIntString(other.Amount)
+	sAmount := newBigIntString(s.Amount)
+	oAmount := newBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) > 0, nil
 
@@ -161,8 +158,8 @@ func (s *AssetAmount) Lt(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for <")
 	}
 
-	sAmount := utils.NewBigIntString(s.Amount)
-	oAmount := utils.NewBigIntString(other.Amount)
+	sAmount := newBigIntString(s.Amount)
+	oAmount := newBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) < 0, nil
 
@@ -170,7 +167,7 @@ func (s *AssetAmount) Lt(other *AssetAmount) (bool, error) {
 
 func (s *AssetAmount) String() string {
 
-	sAmount := utils.NewBigFloatString(s.Amount)
+	sAmount := newBigFloatString(s.Amount)
 
 	helper := new(big.Int)
 	helper.Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil)
@@ -179,5 +176,33 @@ func (s *AssetAmount) String() string {
 	amount.Quo(sAmount, new(big.Float).SetInt(helper))
 
 	return fmt.Sprintf("%s('%s')", s.Asset.UnitName, amount.String())
+
+}
+
+//duplication due to import cycle
+
+func newBigIntString(valueStr string) *big.Int {
+
+	newBigInt := new(big.Int)
+
+	_, ok := newBigInt.SetString(valueStr, 10)
+	if !ok {
+		newBigInt.SetString("0", 10)
+	}
+
+	return newBigInt
+
+}
+
+func newBigFloatString(valueStr string) *big.Float {
+
+	newBigFloat := new(big.Float)
+
+	_, ok := newBigFloat.SetString(valueStr)
+	if !ok {
+		newBigFloat.SetString("0")
+	}
+
+	return newBigFloat
 
 }

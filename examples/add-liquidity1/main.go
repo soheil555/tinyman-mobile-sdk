@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/soheil555/tinyman-mobile-sdk/assets"
+	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/client"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/pools"
 
@@ -125,7 +125,7 @@ func main() {
 
 			if amountUint.Cmp(big.NewInt(1_000)) > 0 {
 
-				assetAmount := &assets.AssetAmount{
+				assetAmount := &types.AssetAmount{
 					Asset:  pool.LiquidityAsset,
 					Amount: amount,
 				}

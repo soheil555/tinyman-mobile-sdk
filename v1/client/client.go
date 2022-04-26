@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"reflect"
 
-	"github.com/soheil555/tinyman-mobile-sdk/assets"
 	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/utils"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/constants"
@@ -25,7 +24,7 @@ type TinymanClient struct {
 	algod          *algod.Client
 	indexer        *indexer.Client
 	ValidatorAppId int
-	assetsCache    map[int]*assets.Asset
+	assetsCache    map[int]*types.Asset
 	UserAddress    string
 }
 
@@ -57,7 +56,7 @@ func NewTinymanClient(algodClientURL, indexerClientURL string, validatorAppId in
 		algodClient,
 		indexerClient,
 		validatorAppId,
-		map[int]*assets.Asset{},
+		map[int]*types.Asset{},
 		user.String(),
 	}, nil
 }
@@ -78,11 +77,11 @@ func NewTinymanMainnetClient(algodClientURL, indexerClientURL, userAddress strin
 // func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
 // }
 
-func (s *TinymanClient) FetchAsset(assetID int) (asset *assets.Asset, err error) {
+func (s *TinymanClient) FetchAsset(assetID int) (asset *types.Asset, err error) {
 
 	if _, ok := s.assetsCache[assetID]; !ok {
 
-		asset = &assets.Asset{Id: assetID}
+		asset = &types.Asset{Id: assetID}
 		err = asset.Fetch(s.indexer)
 
 		if err != nil {
@@ -267,7 +266,7 @@ func (s *TinymanClient) FetchExcessAmounts(userAddress string) (excessAmountsStr
 			}
 
 			assetID := binary.BigEndian.Uint64(b[bLen-8:])
-			var asset *assets.Asset
+			var asset *types.Asset
 			asset, err = s.FetchAsset(int(assetID))
 			if err != nil {
 				return
