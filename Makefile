@@ -8,7 +8,6 @@ bindings-android:
 	mkdir -p android/libs
 	ANDROID_HOME=$(ANDROID_HOME) go run $(GO_MOBILE) bind -v -o android/libs/tinyman.aar -target=android \
 		github.com/soheil555/tinyman-mobile-sdk/types \
-		github.com/soheil555/tinyman-mobile-sdk/assets \
 		github.com/soheil555/tinyman-mobile-sdk/utils \
 		github.com/soheil555/tinyman-mobile-sdk/v1/contracts \
 		github.com/soheil555/tinyman-mobile-sdk/v1/bootstrap \
@@ -27,7 +26,6 @@ bindings-ios:
 	mkdir -p ios/libs
 	go run $(GO_MOBILE) bind -v -o ios/libs/Tinyman.xcframework -target=ios \
 		github.com/soheil555/tinyman-mobile-sdk/types \
-		github.com/soheil555/tinyman-mobile-sdk/assets \
 		github.com/soheil555/tinyman-mobile-sdk/utils \
 		github.com/soheil555/tinyman-mobile-sdk/v1/contracts \
 		github.com/soheil555/tinyman-mobile-sdk/v1/bootstrap \
