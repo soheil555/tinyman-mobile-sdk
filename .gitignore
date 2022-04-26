@@ -2,3 +2,4 @@
 .env
 android/libs
 ios/libs
+main.go

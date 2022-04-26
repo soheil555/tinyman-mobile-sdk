@@ -7,6 +7,7 @@ import (
 
 	"github.com/algorand/go-algorand-sdk/client/v2/common/models"
 	"github.com/algorand/go-algorand-sdk/client/v2/indexer"
+	"github.com/soheil555/tinyman-mobile-sdk/utils"
 )
 
 type Asset struct {
@@ -76,15 +77,14 @@ func NewAssetAmount(asset *Asset, amount string) *AssetAmount {
 
 func (s *AssetAmount) Mul(other float64) (assetAmount *AssetAmount) {
 
-	sAmount, ok := new(big.Float).SetString(s.Amount)
-	if !ok {
-		return
-	}
+	sAmount := utils.NewBigFloatString(s.Amount)
+	product := new(big.Float)
 
-	mulResult := new(big.Float).Mul(sAmount, big.NewFloat(other))
-	Amount, _ := mulResult.Int(nil)
+	product.Mul(sAmount, big.NewFloat(other))
 
-	assetAmount = &AssetAmount{s.Asset, Amount.String()}
+	productInt, _ := product.Int(nil)
+	assetAmount = &AssetAmount{s.Asset, productInt.String()}
+
 	return
 
 }
@@ -96,18 +96,13 @@ func (s *AssetAmount) Add(other *AssetAmount) (assetAmount *AssetAmount, err err
 		return
 	}
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
-	if !ok {
-		return
-	}
+	sAmount := utils.NewBigIntString(s.Amount)
+	oAmount := utils.NewBigIntString(other.Amount)
 
-	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
-	if !ok {
-		return
-	}
+	sum := new(big.Int)
+	sum.Add(sAmount, oAmount)
 
-	Amount := new(big.Int).Add(sAmount, oAmount)
-	assetAmount = &AssetAmount{s.Asset, Amount.String()}
+	assetAmount = &AssetAmount{s.Asset, sum.String()}
 
 	return
 
@@ -120,19 +115,14 @@ func (s *AssetAmount) Sub(other *AssetAmount) (assetAmount *AssetAmount, err err
 		return
 	}
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
-	if !ok {
-		return
-	}
+	sAmount := utils.NewBigIntString(s.Amount)
 
-	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
-	if !ok {
-		return
-	}
+	oAmount := utils.NewBigIntString(other.Amount)
 
-	Amount := new(big.Int).Sub(sAmount, oAmount)
+	difference := new(big.Int)
+	difference.Sub(sAmount, oAmount)
 
-	assetAmount = &AssetAmount{s.Asset, Amount.String()}
+	assetAmount = &AssetAmount{s.Asset, difference.String()}
 	return
 
 }
@@ -143,15 +133,8 @@ func (s *AssetAmount) Eq(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for ==")
 	}
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
-	if !ok {
-		return false, nil
-	}
-
-	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
-	if !ok {
-		return false, nil
-	}
+	sAmount := utils.NewBigIntString(s.Amount)
+	oAmount := utils.NewBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) == 0, nil
 
@@ -163,15 +146,8 @@ func (s *AssetAmount) Gt(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for >")
 	}
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
-	if !ok {
-		return false, nil
-	}
-
-	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
-	if !ok {
-		return false, nil
-	}
+	sAmount := utils.NewBigIntString(s.Amount)
+	oAmount := utils.NewBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) > 0, nil
 
@@ -183,15 +159,8 @@ func (s *AssetAmount) Lt(other *AssetAmount) (bool, error) {
 		return false, fmt.Errorf("unsupported asset type for <")
 	}
 
-	sAmount, ok := new(big.Int).SetString(s.Amount, 10)
-	if !ok {
-		return false, nil
-	}
-
-	oAmount, ok := new(big.Int).SetString(other.Amount, 10)
-	if !ok {
-		return false, nil
-	}
+	sAmount := utils.NewBigIntString(s.Amount)
+	oAmount := utils.NewBigIntString(other.Amount)
 
 	return sAmount.Cmp(oAmount) < 0, nil
 
@@ -199,12 +168,14 @@ func (s *AssetAmount) Lt(other *AssetAmount) (bool, error) {
 
 func (s *AssetAmount) String() string {
 
-	sAmount, ok := new(big.Float).SetString(s.Amount)
-	if !ok {
-		return ""
-	}
-	tmp := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil)
-	amount := new(big.Float).Quo(sAmount, new(big.Float).SetInt(tmp))
+	sAmount := utils.NewBigFloatString(s.Amount)
+
+	helper := new(big.Int)
+	helper.Exp(big.NewInt(10), big.NewInt(int64(s.Asset.Decimals)), nil)
+
+	amount := new(big.Float)
+	amount.Quo(sAmount, new(big.Float).SetInt(helper))
+
 	return fmt.Sprintf("%s('%s')", s.Asset.UnitName, amount.String())
 
 }

@@ -6,6 +6,7 @@ import (
 	b64 "encoding/base64"
 	"encoding/binary"
 	"fmt"
+	"math/big"
 	"sort"
 	"strings"
 
@@ -360,5 +361,31 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *type
 		TxId: txid,
 	}
 	return
+
+}
+
+func NewBigIntString(valueStr string) *big.Int {
+
+	newBigInt := new(big.Int)
+
+	_, ok := newBigInt.SetString(valueStr, 10)
+	if !ok {
+		newBigInt.SetString("0", 10)
+	}
+
+	return newBigInt
+
+}
+
+func NewBigFloatString(valueStr string) *big.Float {
+
+	newBigFloat := new(big.Float)
+
+	_, ok := newBigFloat.SetString(valueStr)
+	if !ok {
+		newBigFloat.SetString("0")
+	}
+
+	return newBigFloat
 
 }
