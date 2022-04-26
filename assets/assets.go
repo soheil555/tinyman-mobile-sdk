@@ -66,6 +66,8 @@ func (s *Asset) String() string {
 	return fmt.Sprintf("Asset(%s - %d)", s.UnitName, s.Id)
 }
 
+
+//TODO: maybe make Amount unexported and create setter and getter methods to make sure amount is always integer
 type AssetAmount struct {
 	Asset  *Asset
 	Amount string
