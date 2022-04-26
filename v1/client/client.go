@@ -115,7 +115,7 @@ func (s *TinymanClient) SuggestedParams() (params algoTypes.SuggestedParams, err
 	return s.algod.SuggestedParams().Do(context.Background())
 }
 
-func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bool) (trxInfo *types.TrxInfo, err error) {
+func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bool) (transactionInformation *types.TransactionInformation, err error) {
 
 	signedGroup := transactionGroup.GetSignedGroup()
 
@@ -130,7 +130,7 @@ func (s *TinymanClient) Submit(transactionGroup *utils.TransactionGroup, wait bo
 		return utils.WaitForConfirmation(s.algod, txid)
 	}
 
-	trxInfo = &types.TrxInfo{
+	transactionInformation = &types.TransactionInformation{
 		TxId: txid,
 	}
 	return

@@ -1,6 +1,6 @@
 package types
 
-type TrxInfo struct {
+type TransactionInformation struct {
 	TxId           string
 	ConfirmedRound int
 }

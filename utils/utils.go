@@ -105,7 +105,7 @@ func EncodeVarint(number int) (buf []byte) {
 }
 
 // not compatible with go-mobile
-func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Transaction, signedTransactions [][]byte, sender algoTypes.Address, senderSK ed25519.PrivateKey) (trxInfo *types.TrxInfo, err error) {
+func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Transaction, signedTransactions [][]byte, sender algoTypes.Address, senderSK ed25519.PrivateKey) (transactionInformation *types.TransactionInformation, err error) {
 
 	for i, txn := range transactions {
 
@@ -146,7 +146,7 @@ func SignAndSubmitTransactions(client *algod.Client, transactions []algoTypes.Tr
    Utility function to wait until the transaction is
    confirmed before proceeding.
 */
-func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxInfo, err error) {
+func WaitForConfirmation(client *algod.Client, txid string) (transactionInformation *types.TransactionInformation, err error) {
 
 	nodeStatus, err := client.Status().Do(context.Background())
 	if err != nil {
@@ -158,14 +158,14 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxI
 
 	txinfo := client.PendingTransactionInformation(txid)
 
-	pendingTrxInfo, _, err := txinfo.Do(context.Background())
+	txInfoResponse, _, err := txinfo.Do(context.Background())
 
 	if err != nil {
 		err = fmt.Errorf("error getting algod pending transaction info: %s", err)
 		return
 	}
 
-	for !(pendingTrxInfo.ConfirmedRound > 0) {
+	for !(txInfoResponse.ConfirmedRound > 0) {
 
 		fmt.Println("Waiting for confirmation")
 		lastRound += 1
@@ -176,7 +176,7 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxI
 			return
 		}
 
-		pendingTrxInfo, _, err = txinfo.Do(context.Background())
+		txInfoResponse, _, err = txinfo.Do(context.Background())
 
 		if err != nil {
 			err = fmt.Errorf("error getting algod pending transaction info: %s", err)
@@ -185,11 +185,11 @@ func WaitForConfirmation(client *algod.Client, txid string) (trxInfo *types.TrxI
 
 	}
 
-	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, pendingTrxInfo.ConfirmedRound)
+	fmt.Printf("Transaction %s confirmed in round %d.\n", txid, txInfoResponse.ConfirmedRound)
 
-	trxInfo = &types.TrxInfo{
+	transactionInformation = &types.TransactionInformation{
 		TxId:           txid,
-		ConfirmedRound: int(pendingTrxInfo.ConfirmedRound),
+		ConfirmedRound: int(txInfoResponse.ConfirmedRound),
 	}
 
 	return
@@ -336,7 +336,7 @@ func (s *TransactionGroup) SignWithPrivateKey(address string, privateKey string)
 }
 
 // not compatible with go-mobile
-func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *types.TrxInfo, err error) {
+func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (transactionInformation *types.TransactionInformation, err error) {
 
 	var signedGroup []byte
 
@@ -357,7 +357,7 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (trxInfo *type
 		return WaitForConfirmation(algod, txid)
 	}
 
-	trxInfo = &types.TrxInfo{
+	transactionInformation = &types.TransactionInformation{
 		TxId: txid,
 	}
 	return
