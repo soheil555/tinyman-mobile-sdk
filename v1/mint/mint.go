@@ -1,9 +1,6 @@
 package mint
 
 import (
-	"fmt"
-	"math/big"
-
 	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/utils"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/contracts"
@@ -37,26 +34,11 @@ func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		MinFee:           uint64(suggestedParams.MinFee),
 	}
 
-	Asset1Amount, ok := new(big.Int).SetString(asset1Amount, 10)
-	if !ok {
-		err = fmt.Errorf("failed to convert asset1Amount to int")
-		return
-	}
-
-	Asset2Amount, ok := new(big.Int).SetString(asset2Amount, 10)
-	if !ok {
-		err = fmt.Errorf("failed to convert asset1Amount to int")
-		return
-	}
-
-	LiquidityAssetAmount, ok := new(big.Int).SetString(liquidityAssetAmount, 10)
-	if !ok {
-		err = fmt.Errorf("failed to convert asset1Amount to int")
-		return
-	}
+	asset1AmountBig := utils.NewBigIntString(asset1Amount)
+	asset2AmountBig := utils.NewBigIntString(asset2Amount)
+	liquidityAssetAmountBig := utils.NewBigIntString(liquidityAssetAmount)
 
 	poolAddress := crypto.AddressFromProgram(poolLogicsig.Logic)
-
 	paymentTxn, err := future.MakePaymentTxn(sender.String(), poolAddress.String(), 2000, []byte("fee"), "", algoSuggestedParams)
 
 	if err != nil {
@@ -77,7 +59,7 @@ func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 		return
 	}
 
-	assetTransferTxn1, err := future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), Asset1Amount.Uint64(), nil, algoSuggestedParams, "", uint64(asset1ID))
+	assetTransferTxn1, err := future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), asset1AmountBig.Uint64(), nil, algoSuggestedParams, "", uint64(asset1ID))
 
 	if err != nil {
 		return
@@ -86,16 +68,16 @@ func PrepareMintTransactions(validatorAppId, asset1ID, asset2ID, liquidityAssetI
 	var assetTransferTxn2 algoTypes.Transaction
 
 	if asset2ID != 0 {
-		assetTransferTxn2, err = future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), Asset2Amount.Uint64(), nil, algoSuggestedParams, "", uint64(asset2ID))
+		assetTransferTxn2, err = future.MakeAssetTransferTxn(sender.String(), poolAddress.String(), asset2AmountBig.Uint64(), nil, algoSuggestedParams, "", uint64(asset2ID))
 	} else {
-		assetTransferTxn2, err = future.MakePaymentTxn(sender.String(), poolAddress.String(), Asset2Amount.Uint64(), nil, "", algoSuggestedParams)
+		assetTransferTxn2, err = future.MakePaymentTxn(sender.String(), poolAddress.String(), asset2AmountBig.Uint64(), nil, "", algoSuggestedParams)
 	}
 
 	if err != nil {
 		return
 	}
 
-	assetTransferTxn3, err := future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), LiquidityAssetAmount.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
+	assetTransferTxn3, err := future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), liquidityAssetAmountBig.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
 
 	if err != nil {
 		return

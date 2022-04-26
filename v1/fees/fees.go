@@ -1,8 +1,6 @@
 package fees
 
 import (
-	"math/big"
-
 	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/utils"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/contracts"
@@ -24,10 +22,7 @@ func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidity
 		return
 	}
 
-	Amount, ok := new(big.Int).SetString(amount, 10)
-	if !ok {
-		return
-	}
+	amountBig := utils.NewBigIntString(amount)
 
 	algoSuggestedParams := algoTypes.SuggestedParams{
 		Fee:              algoTypes.MicroAlgos(suggestedParams.Fee),
@@ -68,7 +63,7 @@ func PrepareRedeemFeesTransactions(validatorAppId, asset1ID, asset2ID, liquidity
 		return
 	}
 
-	assetTransferTxn, err := future.MakeAssetTransferTxn(poolAddress.String(), creator.String(), Amount.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
+	assetTransferTxn, err := future.MakeAssetTransferTxn(poolAddress.String(), creator.String(), amountBig.Uint64(), nil, algoSuggestedParams, "", uint64(liquidityAssetID))
 
 	if err != nil {
 		return

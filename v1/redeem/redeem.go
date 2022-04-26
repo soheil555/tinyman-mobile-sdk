@@ -1,8 +1,6 @@
 package redeem
 
 import (
-	"math/big"
-
 	"github.com/soheil555/tinyman-mobile-sdk/types"
 	"github.com/soheil555/tinyman-mobile-sdk/utils"
 	"github.com/soheil555/tinyman-mobile-sdk/v1/contracts"
@@ -19,10 +17,7 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 		return
 	}
 
-	AssetAmount, ok := new(big.Int).SetString(assetAmount, 10)
-	if !ok {
-		return
-	}
+	assetAmountBig := utils.NewBigIntString(assetAmount)
 
 	poolLogicsig, err := contracts.GetPoolLogicsig(validatorAppId, asset1ID, asset2ID)
 
@@ -67,11 +62,11 @@ func PrepareRedeemTransactions(validatorAppId, asset1ID, asset2ID, liquidityAsse
 
 	if assetID != 0 {
 
-		assetTransferTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), AssetAmount.Uint64(), nil, algoSuggestedParams, "", uint64(assetID))
+		assetTransferTxn, err = future.MakeAssetTransferTxn(poolAddress.String(), sender.String(), assetAmountBig.Uint64(), nil, algoSuggestedParams, "", uint64(assetID))
 
 	} else {
 
-		assetTransferTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), AssetAmount.Uint64(), nil, "", algoSuggestedParams)
+		assetTransferTxn, err = future.MakePaymentTxn(poolAddress.String(), sender.String(), assetAmountBig.Uint64(), nil, "", algoSuggestedParams)
 
 	}
 

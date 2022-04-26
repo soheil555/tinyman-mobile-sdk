@@ -124,15 +124,15 @@ func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo,
 
 	outstandingLiquidityAssetAmount := utils.GetStateInt(validatorAppState, encodedKey3)
 
-	Asset1Reserves := big.NewInt(int64(asset1Reserves))
-	Asset2Reserves := big.NewInt(int64(asset2Reserves))
-	IssuedLiquidity := big.NewInt(int64(issuedLiquidity))
-	AccountAmount := big.NewInt(int64(accountInfo.Amount))
+	asset1ReservesBig := big.NewInt(int64(asset1Reserves))
+	asset2ReservesBig := big.NewInt(int64(asset2Reserves))
+	issuedLiquidityBig := big.NewInt(int64(issuedLiquidity))
+	accountAmountBig := big.NewInt(int64(accountInfo.Amount))
 
-	UnclaimedProtocolFees := big.NewInt(int64(unclaimedProtocolFees))
-	OutstandingAsset1Amount := big.NewInt(int64(outstandingAsset1Amount))
-	OutstandingAsset2Amount := big.NewInt(int64(outstandingAsset2Amount))
-	OutstandingLiquidityAssetAmount := big.NewInt(int64(outstandingLiquidityAssetAmount))
+	unclaimedProtocolFeesBig := big.NewInt(int64(unclaimedProtocolFees))
+	outstandingAsset1AmountBig := big.NewInt(int64(outstandingAsset1Amount))
+	outstandingAsset2AmountBig := big.NewInt(int64(outstandingAsset2Amount))
+	outstandingLiquidityAssetAmountBig := big.NewInt(int64(outstandingLiquidityAssetAmount))
 
 	poolInfo = &PoolInfo{
 		Address:                         poolAddress.String(),
@@ -140,15 +140,15 @@ func GetPoolInfoFromAccountInfo(accountInfo models.Account) (poolInfo *PoolInfo,
 		Asset2Id:                        asset2Id,
 		LiquidityAssetId:                liquidityAssetID,
 		LiquidityAssetName:              liquidityAsset.Params.Name,
-		Asset1Reserves:                  Asset1Reserves.String(),
-		Asset2Reserves:                  Asset2Reserves.String(),
-		IssuedLiquidity:                 IssuedLiquidity.String(),
-		UnclaimedProtocolFees:           UnclaimedProtocolFees.String(),
-		OutstandingAsset1Amount:         OutstandingAsset1Amount.String(),
-		OutstandingAsset2Amount:         OutstandingAsset2Amount.String(),
-		OutstandingLiquidityAssetAmount: OutstandingLiquidityAssetAmount.String(),
+		Asset1Reserves:                  asset1ReservesBig.String(),
+		Asset2Reserves:                  asset2ReservesBig.String(),
+		IssuedLiquidity:                 issuedLiquidityBig.String(),
+		UnclaimedProtocolFees:           unclaimedProtocolFeesBig.String(),
+		OutstandingAsset1Amount:         outstandingAsset1AmountBig.String(),
+		OutstandingAsset2Amount:         outstandingAsset2AmountBig.String(),
+		OutstandingLiquidityAssetAmount: outstandingLiquidityAssetAmountBig.String(),
 		ValidatorAppId:                  validatorAppID,
-		AlgoBalance:                     AccountAmount.String(),
+		AlgoBalance:                     accountAmountBig.String(),
 		Round:                           int(accountInfo.Round),
 	}
 
@@ -203,20 +203,16 @@ func (s *SwapQuote) AmountInWithSlippage() (assetAmount *assets.AssetAmount, err
 
 func (s *SwapQuote) Price() float64 {
 
-	sAmountIn, ok := new(big.Float).SetString(s.AmountIn.Amount)
-	if !ok {
-		return 0
-	}
+	sAmountIn := utils.NewBigFloatString(s.AmountIn.Amount)
+	sAmountOut := utils.NewBigFloatString(s.AmountOut.Amount)
 
-	sAmountOut, ok := new(big.Float).SetString(s.AmountOut.Amount)
-	if !ok {
-		return 0
-	}
+	price := new(big.Float)
+	price.Quo(sAmountOut, sAmountIn)
 
-	num := new(big.Float).Quo(sAmountOut, sAmountIn)
-	numFloat, _ := num.Float64()
+	priceFloat64, _ := price.Float64()
 
-	return numFloat
+	return priceFloat64
+
 }
 
 func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
@@ -233,19 +229,13 @@ func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
 		return
 	}
 
-	sAmountInWithSlippage, ok := new(big.Float).SetString(amountInWithSlippage.Amount)
-	if !ok {
+	sAmountInWithSlippage := utils.NewBigFloatString(amountInWithSlippage.Amount)
+	sAmountOutWithSlippage := utils.NewBigFloatString(amountOutWithSlippage.Amount)
 
-		return 0, fmt.Errorf("failed to convert amountIn to float")
-	}
+	priceWithSlippageBig := new(big.Float)
+	priceWithSlippageBig.Quo(sAmountOutWithSlippage, sAmountInWithSlippage)
 
-	sAmountOutWithSlippage, ok := new(big.Float).SetString(amountOutWithSlippage.Amount)
-	if !ok {
-		return 0, fmt.Errorf("failed to convert amountOut to float")
-	}
-
-	num := new(big.Float).Quo(sAmountOutWithSlippage, sAmountInWithSlippage)
-	priceWithSlippage, _ = num.Float64()
+	priceWithSlippage, _ = priceWithSlippageBig.Float64()
 
 	return
 
@@ -301,33 +291,41 @@ func (s *BurnQuote) GetAmountsOut() map[int]string {
 
 }
 
-func (s *BurnQuote) AmountsOutWithSlippage() (amountsOutWithSlippage string, err error) {
+func (s *BurnQuote) AmountsOutWithSlippage() (amountsOutWithSlippage map[int]string, err error) {
 
-	out := make(map[int]string)
+	amountsOutWithSlippage = make(map[int]string)
 
 	for k := range s.amountsOut {
 
-		amountsOut, _ := new(big.Float).SetString(s.amountsOut[k])
+		amountsOut := utils.NewBigFloatString(s.amountsOut[k])
 		slippage := big.NewFloat(s.Slippage)
 
-		tmp := new(big.Float).Mul(amountsOut, slippage)
+		helper := new(big.Float)
+		helper.Mul(amountsOut, slippage)
 
-		amountOutWithSlippageUint, _ := new(big.Float).Sub(amountsOut, tmp).Int(nil)
+		amountOutWithSlippageInt, _ := new(big.Float).Sub(amountsOut, helper).Int(nil)
+		amountsOutWithSlippage[k] = amountOutWithSlippageInt.String()
 
-		if err != nil {
-			return
-		}
-
-		out[k] = amountOutWithSlippageUint.String()
 	}
 
-	amountsOutWithSlippageBytes, err := json.Marshal(out)
+	return
+}
+
+func (s *BurnQuote) AmountsOutWithSlippageStr() (amountsOutWithSlippageStr string, err error) {
+
+	amountsOutWithSlippage, err := s.AmountsOutWithSlippage()
 	if err != nil {
 		return
 	}
 
-	amountsOutWithSlippage = string(amountsOutWithSlippageBytes)
+	amountsOutWithSlippageBytes, err := json.Marshal(amountsOutWithSlippage)
+	if err != nil {
+		return
+	}
+
+	amountsOutWithSlippageStr = string(amountsOutWithSlippageBytes)
 	return
+
 }
 
 type Pool struct {
@@ -458,14 +456,15 @@ func (s *Pool) UpdateFromInfo(info *PoolInfo) {
 
 	if s.Asset2.Id == 0 {
 
-		algoBalance, _ := new(big.Int).SetString(s.AlgoBalance, 10)
-		OutstandingAsset2Amount, _ := new(big.Int).SetString(s.OutstandingAsset2Amount, 10)
+		algoBalance := utils.NewBigIntString(s.AlgoBalance)
+		outstandingAsset2Amount := utils.NewBigIntString(s.OutstandingAsset2Amount)
 		minBalance := big.NewInt(int64(s.MinBalance))
 
-		tmp := new(big.Int).Sub(algoBalance, minBalance)
-		tmp.Sub(tmp, OutstandingAsset2Amount)
+		asset2Reserves := new(big.Int)
+		asset2Reserves.Sub(algoBalance, minBalance)
+		asset2Reserves.Sub(asset2Reserves, outstandingAsset2Amount)
 
-		s.Asset2Reserves = tmp.String()
+		s.Asset2Reserves = asset2Reserves.String()
 
 	}
 
@@ -495,24 +494,29 @@ func (s *Pool) Address() (poolAddress string, err error) {
 
 func (s *Pool) Asset1Price() float64 {
 
-	asset2Reserves, _ := new(big.Float).SetString(s.Asset2Reserves)
-	asset1Reserves, _ := new(big.Float).SetString(s.Asset1Reserves)
+	asset2Reserves := utils.NewBigFloatString(s.Asset2Reserves)
+	asset1Reserves := utils.NewBigFloatString(s.Asset1Reserves)
 
-	num := new(big.Float).Quo(asset2Reserves, asset1Reserves)
-	numFloat, _ := num.Float64()
+	asset1Price := new(big.Float)
+	asset1Price.Quo(asset2Reserves, asset1Reserves)
 
-	return numFloat
+	asset1PriceFloat64, _ := asset1Price.Float64()
+	return asset1PriceFloat64
+
 }
 
 func (s *Pool) Asset2Price() float64 {
 
-	asset2Reserves, _ := new(big.Float).SetString(s.Asset2Reserves)
-	asset1Reserves, _ := new(big.Float).SetString(s.Asset1Reserves)
+	asset2Reserves := utils.NewBigFloatString(s.Asset2Reserves)
+	asset1Reserves := utils.NewBigFloatString(s.Asset1Reserves)
 
-	num := new(big.Float).Quo(asset1Reserves, asset2Reserves)
-	numFloat, _ := num.Float64()
+	asset1Price := new(big.Float)
+	asset1Price.Quo(asset1Reserves, asset2Reserves)
 
-	return numFloat
+	asset1PriceFloat64, _ := asset1Price.Float64()
+
+	return asset1PriceFloat64
+
 }
 
 func (s *Pool) Info() (poolInfo *PoolInfo, err error) {
@@ -547,21 +551,22 @@ func (s *Pool) Info() (poolInfo *PoolInfo, err error) {
 
 func (s *Pool) Convert(amount *assets.AssetAmount) (assetAmount *assets.AssetAmount) {
 
-	tmp, _ := new(big.Float).SetString(amount.Amount)
+	helper := utils.NewBigFloatString(amount.Amount)
 
 	if *amount.Asset == *s.Asset1 {
 
 		asset1Price := big.NewFloat(s.Asset1Price())
-		Amount, _ := new(big.Float).Mul(tmp, asset1Price).Int(nil)
+		Amount, _ := new(big.Float).Mul(helper, asset1Price).Int(nil)
 
 		assetAmount = &assets.AssetAmount{Asset: s.Asset2, Amount: Amount.String()}
 
 	} else if *amount.Asset == *s.Asset2 {
 
 		asset2Price := big.NewFloat(s.Asset2Price())
-		Amount, _ := new(big.Float).Mul(tmp, asset2Price).Int(nil)
+		Amount, _ := new(big.Float).Mul(helper, asset2Price).Int(nil)
 
 		assetAmount = &assets.AssetAmount{Asset: s.Asset1, Amount: Amount.String()}
+
 	}
 
 	return
@@ -594,8 +599,8 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 		return
 	}
 
-	issuedLiquidity, ok := new(big.Int).SetString(s.IssuedLiquidity, 10)
-	if ok && issuedLiquidity.Cmp(big.NewInt(0)) > 0 {
+	issuedLiquidity := utils.NewBigFloatString(s.IssuedLiquidity)
+	if issuedLiquidity.Cmp(big.NewFloat(0)) > 0 {
 
 		if amount1 == nil {
 			amount1 = s.Convert(amount2)
@@ -605,35 +610,16 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 			amount2 = s.Convert(amount1)
 		}
 
-		amount1Amount, ok := new(big.Int).SetString(amount1.Amount, 10)
-		if !ok {
-			err = fmt.Errorf("failed to convert amount1.Amount to int")
-			return
-		}
+		amount1Amount := utils.NewBigFloatString(amount1.Amount)
+		amount2Amount := utils.NewBigFloatString(amount2.Amount)
+		asset1Reserves := utils.NewBigFloatString(s.Asset1Reserves)
+		asset2Reserves := utils.NewBigFloatString(s.Asset2Reserves)
 
-		amount2Amount, ok := new(big.Int).SetString(amount2.Amount, 10)
-		if !ok {
-			err = fmt.Errorf("failed to convert amount2.Amount to int")
-			return
-		}
+		helper1 := new(big.Float).Mul(amount1Amount, issuedLiquidity)
+		helper2 := new(big.Float).Mul(amount2Amount, issuedLiquidity)
 
-		asset1Reserves, ok := new(big.Int).SetString(s.Asset1Reserves, 10)
-		if !ok {
-			err = fmt.Errorf("failed to convert Asset1Reserves to int")
-			return
-		}
-
-		asset2Reserves, ok := new(big.Int).SetString(s.Asset2Reserves, 10)
-		if !ok {
-			err = fmt.Errorf("failed to convert Asset2Reserves to int")
-			return
-		}
-
-		tmp1 := new(big.Int).Mul(amount1Amount, issuedLiquidity)
-		tmp2 := new(big.Int).Mul(amount2Amount, issuedLiquidity)
-
-		a := new(big.Float).Quo(new(big.Float).SetInt(tmp1), new(big.Float).SetInt(asset1Reserves))
-		b := new(big.Float).Quo(new(big.Float).SetInt(tmp2), new(big.Float).SetInt(asset2Reserves))
+		a := new(big.Float).Quo(helper1, asset1Reserves)
+		b := new(big.Float).Quo(helper2, asset2Reserves)
 
 		if a.Cmp(b) < 0 {
 
@@ -654,16 +640,17 @@ func (s *Pool) FetchMintQuote(amountA, amountB *assets.AssetAmount, slippage flo
 			return
 		}
 
-		amount1Amount, _ := new(big.Float).SetString(amount1.Amount)
-		amount2Amount, _ := new(big.Float).SetString(amount2.Amount)
+		amount1Amount := utils.NewBigFloatString(amount1.Amount)
+		amount2Amount := utils.NewBigFloatString(amount2.Amount)
 
-		tmp := new(big.Float).Mul(amount1Amount, amount2Amount)
-		tmp.Sqrt(tmp)
-		tmp.Sub(tmp, big.NewFloat(1000))
+		helper := new(big.Float)
+		helper.Mul(amount1Amount, amount2Amount)
+		helper.Sqrt(helper)
+		helper.Sub(helper, big.NewFloat(1000))
 
-		tmpInt, _ := tmp.Int(nil)
+		helperInt, _ := helper.Int(nil)
+		liquidityAssetAmount = helperInt.String()
 
-		liquidityAssetAmount = tmpInt.String()
 		slippage = 0
 
 	}
@@ -694,16 +681,16 @@ func (s *Pool) FetchBurnQuote(liquidityAssetIn *assets.AssetAmount, slippage flo
 		return
 	}
 
-	liquidityAssetInAmount, _ := new(big.Int).SetString(liquidityAssetIn.Amount, 10)
-	asset1Reserves, _ := new(big.Int).SetString(s.Asset1Reserves, 10)
-	asset2Reserves, _ := new(big.Int).SetString(s.Asset2Reserves, 10)
-	issuedLiquidity, _ := new(big.Int).SetString(s.IssuedLiquidity, 10)
+	liquidityAssetInAmount := utils.NewBigFloatString(liquidityAssetIn.Amount)
+	asset1Reserves := utils.NewBigFloatString(s.Asset1Reserves)
+	asset2Reserves := utils.NewBigFloatString(s.Asset2Reserves)
+	issuedLiquidity := utils.NewBigFloatString(s.IssuedLiquidity)
 
-	tmp1 := new(big.Int).Mul(liquidityAssetInAmount, asset1Reserves)
-	tmp2 := new(big.Int).Mul(liquidityAssetInAmount, asset2Reserves)
+	helper1 := new(big.Float).Mul(liquidityAssetInAmount, asset1Reserves)
+	helper2 := new(big.Float).Mul(liquidityAssetInAmount, asset2Reserves)
 
-	asset1Amount := new(big.Float).Quo(new(big.Float).SetInt(tmp1), new(big.Float).SetInt(issuedLiquidity))
-	asset2Amount := new(big.Float).Quo(new(big.Float).SetInt(tmp2), new(big.Float).SetInt(issuedLiquidity))
+	asset1Amount := new(big.Float).Quo(helper1, issuedLiquidity)
+	asset2Amount := new(big.Float).Quo(helper2, issuedLiquidity)
 
 	asset1AmountInt, _ := asset1Amount.Int(nil)
 	asset2AmountInt, _ := asset2Amount.Int(nil)
@@ -750,26 +737,27 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn *assets.AssetAmount, slippage f
 		outputSupply = s.Asset1Reserves
 	}
 
-	InputSupply, _ := new(big.Int).SetString(inputSupply, 10)
-	OutputSupply, _ := new(big.Int).SetString(outputSupply, 10)
+	inputSupplyBig := utils.NewBigFloatString(inputSupply)
+	outputSupplyBig := utils.NewBigFloatString(outputSupply)
 
-	if InputSupply.Cmp(big.NewInt(0)) == 0 || OutputSupply.Cmp(big.NewInt(0)) == 0 {
+	if inputSupplyBig.Cmp(big.NewFloat(0)) == 0 || outputSupplyBig.Cmp(big.NewFloat(0)) == 0 {
 		err = fmt.Errorf("pool has no liquidity")
 		return
 	}
 
-	k := new(big.Int).Mul(InputSupply, OutputSupply)
-	AssetInAmount, _ := new(big.Int).SetString(assetInAmount, 10)
+	k := new(big.Float).Mul(inputSupplyBig, outputSupplyBig)
+	assetInAmountBig := utils.NewBigFloatString(assetInAmount)
 
-	tmp := new(big.Int).Mul(AssetInAmount, big.NewInt(997))
+	helper1 := new(big.Float).Mul(assetInAmountBig, big.NewFloat(997))
+	assetInAmountMinusFee := new(big.Float).Quo(helper1, big.NewFloat(1000))
 
-	assetInAmountMinusFee := new(big.Float).Quo(new(big.Float).SetInt(tmp), big.NewFloat(1000))
-	swapFees := new(big.Float).Sub(new(big.Float).SetInt(AssetInAmount), assetInAmountMinusFee)
+	swapFees := new(big.Float).Sub(assetInAmountBig, assetInAmountMinusFee)
 
-	tmp2 := new(big.Float).Add(new(big.Float).SetInt(InputSupply), assetInAmountMinusFee)
-	tmp2 = new(big.Float).Quo(new(big.Float).SetInt(k), tmp2)
-	assetOutAmount := new(big.Float).Sub(new(big.Float).SetInt(OutputSupply), tmp2)
+	helper2 := new(big.Float)
+	helper2.Add(inputSupplyBig, assetInAmountMinusFee)
+	helper2.Quo(k, helper2)
 
+	assetOutAmount := new(big.Float).Sub(outputSupplyBig, helper2)
 	assetOutAmountInt, _ := assetOutAmount.Int(nil)
 
 	amountOut := assets.AssetAmount{Asset: assetOut, Amount: assetOutAmountInt.String()}
@@ -813,14 +801,16 @@ func (s *Pool) FetchFixedOutputSwapQuote(amountOut *assets.AssetAmount, slippage
 		outputSupply = s.Asset2Reserves
 	}
 
-	InputSupply, _ := new(big.Float).SetString(inputSupply)
-	OutputSupply, _ := new(big.Float).SetString(outputSupply)
-	AssetOutAmount, _ := new(big.Float).SetString(assetOutAmount)
+	inputSupplyBig := utils.NewBigFloatString(inputSupply)
+	outputSupplyBig := utils.NewBigFloatString(outputSupply)
+	assetOutAmountBig := utils.NewBigFloatString(assetOutAmount)
 
-	k := new(big.Float).Mul(InputSupply, OutputSupply)
+	k := new(big.Float).Mul(inputSupplyBig, outputSupplyBig)
 
-	tmp := new(big.Float).Quo(k, new(big.Float).Sub(OutputSupply, AssetOutAmount))
-	calculatedAmountInWithoutFee := new(big.Float).Sub(tmp, InputSupply)
+	helper := new(big.Float).Sub(outputSupplyBig, assetOutAmountBig)
+	helper.Quo(k, helper)
+
+	calculatedAmountInWithoutFee := new(big.Float).Sub(helper, inputSupplyBig)
 
 	assetInAmount := new(big.Float).Mul(calculatedAmountInWithoutFee, big.NewFloat(1000))
 	assetInAmount.Quo(assetInAmount, big.NewFloat(997))
@@ -1016,14 +1006,7 @@ func (s *Pool) PrepareMintTransactionsFromQuote(quote *MintQuote, poolerAddress 
 	return s.PrepareMintTransactions(amountsIn, liquidityAssetAmount, poolerAddress)
 }
 
-func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount *assets.AssetAmount, amountsOutStr, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
-
-	amountsOut := make(map[int]string)
-	err = json.Unmarshal([]byte(amountsOutStr), &amountsOut)
-
-	if err != nil {
-		return
-	}
+func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount *assets.AssetAmount, amountsOut map[int]string, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
 
 	if len(poolerAddress) == 0 {
 		poolerAddress = s.Client.UserAddress
@@ -1066,6 +1049,18 @@ func (s *Pool) PrepareBurnTransactions(liquidityAssetAmount *assets.AssetAmount,
 	)
 
 	return
+
+}
+
+func (s *Pool) PrepareBurnTransactionsWithAmountsOutStr(liquidityAssetAmount *assets.AssetAmount, amountsOutStr, poolerAddress string) (txnGroup *utils.TransactionGroup, err error) {
+
+	amountsOut := make(map[int]string)
+	err = json.Unmarshal([]byte(amountsOutStr), &amountsOut)
+	if err != nil {
+		return
+	}
+
+	return s.PrepareBurnTransactions(liquidityAssetAmount, amountsOut, poolerAddress)
 
 }
 
@@ -1320,10 +1315,10 @@ func (s *Pool) FetchPoolPosition(poolerAddress string) (poolPosition map[string]
 		return
 	}
 
-	LiquidityAssetAmount, _ := new(big.Float).SetString(liquidityAssetAmount)
-	IssuedLiquidity, _ := new(big.Float).SetString(s.IssuedLiquidity)
+	liquidityAssetAmountBig := utils.NewBigFloatString(liquidityAssetAmount)
+	issuedLiquidityBig := utils.NewBigFloatString(s.IssuedLiquidity)
 
-	share := new(big.Float).Quo(LiquidityAssetAmount, IssuedLiquidity)
+	share := new(big.Float).Quo(liquidityAssetAmountBig, issuedLiquidityBig)
 
 	amountsOut := quote.GetAmountsOut()
 	poolPosition = map[string]string{
