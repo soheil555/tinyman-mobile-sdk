@@ -364,6 +364,7 @@ func (s *TransactionGroup) Sumbit(algod *algod.Client, wait bool) (transactionIn
 
 }
 
+//TODO: maybe return error if valueStr is invalid
 func NewBigIntString(valueStr string) *big.Int {
 
 	newBigInt := new(big.Int)
