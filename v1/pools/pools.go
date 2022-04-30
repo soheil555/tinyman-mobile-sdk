@@ -1394,7 +1394,6 @@ func (s *Pool) FetchStateStr() (validatorAppStateStr string, err error) {
 
 }
 
-// not compatible with go-mobile
 func (s *Pool) FetchStateWithKey(key interface{}) (state int, err error) {
 
 	address, err := s.Address()
@@ -1422,4 +1421,12 @@ func (s *Pool) FetchStateWithKey(key interface{}) (state int, err error) {
 
 	return utils.GetStateInt(validatorAppState, key), nil
 
+}
+
+func (s *Pool) FetchStateWithStrKey(key string) (state int, err error) {
+	return s.FetchStateWithKey(key)
+}
+
+func (s *Pool) FetchStateWithBytesKey(key []byte) (state int, err error) {
+	return s.FetchStateWithKey(key)
 }

@@ -179,8 +179,6 @@ func (s *AssetAmount) String() string {
 
 }
 
-//duplication due to import cycle
-
 func newBigIntString(valueStr string) *big.Int {
 
 	newBigInt := new(big.Int)

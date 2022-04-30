@@ -73,10 +73,6 @@ func NewTinymanMainnetClient(algodClientURL, indexerClientURL, userAddress strin
 
 }
 
-//TODO: implement later, cycle import error
-// func (s *TinymanClient) FetchPool(asset1 interface{}, asset2 interface{}, fetch bool) {
-// }
-
 func (s *TinymanClient) FetchAsset(assetID int) (asset *types.Asset, err error) {
 
 	if _, ok := s.assetsCache[assetID]; !ok {
