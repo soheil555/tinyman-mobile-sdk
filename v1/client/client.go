@@ -23,9 +23,9 @@ import (
 type TinymanClient struct {
 	algod          *algod.Client
 	indexer        *indexer.Client
-	ValidatorAppId int
+	ValidatorAppId int `json:"validator-app-id"`
 	assetsCache    map[int]*types.Asset
-	UserAddress    string
+	UserAddress    string `json:"user-address"`
 }
 
 func NewTinymanClient(algodClientURL, indexerClientURL string, validatorAppId int, userAddress string) (tinymanClient *TinymanClient, err error) {

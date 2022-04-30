@@ -1,5 +1,5 @@
 package types
 
 type LogicSig struct {
-	Logic []byte
+	Logic []byte `json:"logic"`
 }

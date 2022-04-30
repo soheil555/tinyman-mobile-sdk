@@ -10,10 +10,10 @@ import (
 )
 
 type Asset struct {
-	Id       int
-	Name     string
-	UnitName string
-	Decimals int
+	Id       int    `json:"id"`
+	Name     string `json:"name"`
+	UnitName string `json:"unit-name"`
+	Decimals int    `json:"decimals"`
 }
 
 func NewAsset(id int, name string, unitName string, decimals int) *Asset {
@@ -67,8 +67,8 @@ func (s *Asset) String() string {
 
 //TODO: maybe make Amount unexported and create setter and getter methods to make sure amount is always integer
 type AssetAmount struct {
-	Asset  *Asset
-	Amount string
+	Asset  *Asset `json:"asset"`
+	Amount string `json:"amount"`
 }
 
 func NewAssetAmount(asset *Asset, amount string) *AssetAmount {

@@ -26,24 +26,24 @@ import (
 )
 
 type PoolInfo struct {
-	Address                         string
-	Asset1Id                        int
-	Asset2Id                        int
-	Asset1UnitName                  string
-	Asset2UnitName                  string
-	LiquidityAssetId                int
-	LiquidityAssetName              string
-	Asset1Reserves                  string
-	Asset2Reserves                  string
-	IssuedLiquidity                 string
-	UnclaimedProtocolFees           string
-	OutstandingAsset1Amount         string
-	OutstandingAsset2Amount         string
-	OutstandingLiquidityAssetAmount string
-	ValidatorAppId                  int
-	AlgoBalance                     string
-	Round                           int
-	LastRefreshedRound              int
+	Address                         string `json:"address"`
+	Asset1Id                        int    `json:"asset1-id"`
+	Asset2Id                        int    `json:"asset2-id"`
+	Asset1UnitName                  string `json:"asset1-unit-name"`
+	Asset2UnitName                  string `json:"asset2-unit-name"`
+	LiquidityAssetId                int    `json:"liquidity-asset-id"`
+	LiquidityAssetName              string `json:"liquidity-asset-name"`
+	Asset1Reserves                  string `json:"asset1-reserves"`
+	Asset2Reserves                  string `json:"asset2-reserves"`
+	IssuedLiquidity                 string `json:"issued-liquidity"`
+	UnclaimedProtocolFees           string `json:"unclaimed-protocol-fees"`
+	OutstandingAsset1Amount         string `json:"outstanding-asset1-amount"`
+	OutstandingAsset2Amount         string `json:"outstanding-asset2-amount"`
+	OutstandingLiquidityAssetAmount string `json:"outstanding-liquidity-asset-amount"`
+	ValidatorAppId                  int    `json:"validator-app-id"`
+	AlgoBalance                     string `json:"algo-balance"`
+	Round                           int    `json:"round"`
+	LastRefreshedRound              int    `json:"last-refreshed-round"`
 }
 
 func GetPoolInfo(client *client.TinymanClient, validatorAppID, asset1ID, asset2ID int) (poolInfo *PoolInfo, err error) {
@@ -169,11 +169,11 @@ func GetExcessAssetKey(poolAddress string, assetID int) (key []byte, err error) 
 }
 
 type SwapQuote struct {
-	SwapType  string
-	AmountIn  *types.AssetAmount
-	AmountOut *types.AssetAmount
-	SwapFees  *types.AssetAmount
-	Slippage  float64
+	SwapType  string             `json:"swap-type"`
+	AmountIn  *types.AssetAmount `json:"amount-in"`
+	AmountOut *types.AssetAmount `json:"amount-out"`
+	SwapFees  *types.AssetAmount `json:"swap-fees"`
+	Slippage  float64            `json:"slippage"`
 }
 
 func (s *SwapQuote) AmountOutWithSlippage() (assetAmount *types.AssetAmount, err error) {
@@ -242,9 +242,9 @@ func (s *SwapQuote) PriceWithSlippage() (priceWithSlippage float64, err error) {
 
 //TODO: in python code AmountsIn is dict[AssetAmount]
 type MintQuote struct {
-	amountsIn            map[int]string // map[asset.id][assetAmount.Amount]
-	LiquidityAssetAmount *types.AssetAmount
-	Slippage             float64
+	amountsIn            map[int]string     // map[asset.id][assetAmount.Amount]
+	LiquidityAssetAmount *types.AssetAmount `json:"liquidity-asset-amount"`
+	Slippage             float64            `json:"slippage"`
 }
 
 func (s *MintQuote) GetAmountsInStr() (string, error) {
@@ -267,9 +267,9 @@ func (s *MintQuote) LiquidityAssetAmountWithSlippage() (assetAmount *types.Asset
 }
 
 type BurnQuote struct {
-	amountsOut           map[int]string // map[asset.id][assetAmount.Amount]
-	LiquidityAssetAmount *types.AssetAmount
-	Slippage             float64
+	amountsOut           map[int]string     // map[asset.id][assetAmount.Amount]
+	LiquidityAssetAmount *types.AssetAmount `json:"liquidity-asset-amount"`
+	Slippage             float64            `json:"slippage"`
 }
 
 func (s *BurnQuote) GetAmountsOutStr() (amountsOutStr string, err error) {
@@ -328,22 +328,22 @@ func (s *BurnQuote) AmountsOutWithSlippageStr() (amountsOutWithSlippageStr strin
 }
 
 type Pool struct {
-	Client                          *client.TinymanClient
-	ValidatorAppId                  int
-	Asset1                          *types.Asset
-	Asset2                          *types.Asset
-	Exists                          bool
-	LiquidityAsset                  *types.Asset
-	Asset1Reserves                  string
-	Asset2Reserves                  string
-	IssuedLiquidity                 string
-	UnclaimedProtocolFees           string
-	OutstandingAsset1Amount         string
-	OutstandingAsset2Amount         string
-	OutstandingLiquidityAssetAmount string
-	LastRefreshedRound              int
-	AlgoBalance                     string
-	MinBalance                      int
+	Client                          *client.TinymanClient `json:"client"`
+	ValidatorAppId                  int                   `json:"validator-app-id"`
+	Asset1                          *types.Asset          `json:"asset1"`
+	Asset2                          *types.Asset          `json:"asset2"`
+	Exists                          bool                  `json:"exists"`
+	LiquidityAsset                  *types.Asset          `json:"liquidity-asset"`
+	Asset1Reserves                  string                `json:"asset1-reserves"`
+	Asset2Reserves                  string                `json:"asset2-reserves"`
+	IssuedLiquidity                 string                `json:"issued-liquidity"`
+	UnclaimedProtocolFees           string                `json:"unclaimed-protocol-fees"`
+	OutstandingAsset1Amount         string                `json:"outstanding-asset1-amount"`
+	OutstandingAsset2Amount         string                `json:"outstanding-asset2-amount"`
+	OutstandingLiquidityAssetAmount string                `json:"outstanding-liquidity-asset-amount"`
+	LastRefreshedRound              int                   `json:"last-refreshed-round"`
+	AlgoBalance                     string                `json:"algo-balance"`
+	MinBalance                      int                   `json:"min-balance"`
 }
 
 //TODO: is validatorID == 0 a valid ID
