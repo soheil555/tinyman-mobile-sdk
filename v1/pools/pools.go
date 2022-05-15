@@ -599,7 +599,7 @@ func (s *Pool) FetchMintQuote(amountA, amountB *types.AssetAmount, slippage floa
 	}
 
 	issuedLiquidity := utils.NewBigFloatString(s.IssuedLiquidity)
-	if issuedLiquidity.Cmp(big.NewFloat(0)) > 0 {
+	if issuedLiquidity.Sign() > 0 {
 
 		if amount1 == nil {
 			amount1 = s.Convert(amount2)
@@ -739,7 +739,7 @@ func (s *Pool) FetchFixedInputSwapQuote(amountIn *types.AssetAmount, slippage fl
 	inputSupplyBig := utils.NewBigFloatString(inputSupply)
 	outputSupplyBig := utils.NewBigFloatString(outputSupply)
 
-	if inputSupplyBig.Cmp(big.NewFloat(0)) == 0 || outputSupplyBig.Cmp(big.NewFloat(0)) == 0 {
+	if inputSupplyBig.Sign() == 0 || outputSupplyBig.Sign() == 0 {
 		err = fmt.Errorf("pool has no liquidity")
 		return
 	}
